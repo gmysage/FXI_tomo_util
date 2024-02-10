@@ -119,6 +119,8 @@ class App(QWidget):
         self.img_flat = np.ones(s)
         self.img_flat_avg = np.ones(s)
         self.img_rc = np.zeros(s)
+        self.img_recon_slice = []
+        self.img_recon_slice_crop = []
         self.img_angle = []
         self.img_eng = ''
         self.img_sid = ''
@@ -1358,10 +1360,11 @@ class App(QWidget):
         try:
             n_list = self.lst_prj_file.count()
             self.img_recon_slice = []
+            self.img_recon_slice_crop = []
             self.fname_rc_batch = {}
 
             for i in range(n_list):
-                self.pb_rc_auto_batch.setText(f'Processing {i+1}/{n_list}')
+                self.pb_rc_auto_batch.setText(f'{i+1}/{n_list}')
                 QApplication.processEvents()
                 item = self.lst_prj_file.item(i)
                 tx_current = item.text()  # e.g. 'fly_scan_123:  640'
@@ -1386,13 +1389,23 @@ class App(QWidget):
                 self.tx_sli_id.setText(str(sli))
                 QApplication.processEvents()
                 self.img_recon_slice.append(rec)
+                if i == 0:
+                    s = rec.shape
+                    c = s[-1] // 2
+                    r_s = max(c - 200, 0)
+                    r_e = min(c + 200, s[-1])
+                self.img_recon_slice_crop.append(rec[r_s:r_e, r_s:r_e])
+
             #self.img_recon_slice = np.array(self.img_recon_slice)
             #self.update_list()
             if len(self.img_recon_slice):
                 #self.img_recon_slice = tomopy.circ_mask(self.img_recon_slice, axis=0, ratio=0.9)
-                if self.cb1.findText('Batch recon at center slice') < 0:
-                    self.cb1.addItem('Batch recon at center slice')
-                    self.cb1.setCurrentText('Batch recon at center slice')
+                if self.cb1.findText('Batch recon at single slice') < 0:
+                    self.cb1.addItem('Batch recon at single slice')
+                if self.cb1.findText('Batch recon at single slice (crop)') < 0:
+                    self.cb1.addItem('Batch recon at single slice (crop)')
+
+                    self.cb1.setCurrentText('Batch recon at single slice (crop)')
                 self.update_canvas_img()
                 self.msg = 'auto center search finished '
             else:
@@ -1686,6 +1699,7 @@ class App(QWidget):
             if n_list == 0:
                 self.msg = 'no files selected'
             self.img_recon_slice = []
+            self.img_recon_slice_crop = []
             self.fname_rc_batch = {}
             for i in range(n_list):
                 self.pb_rc_1_sli.setText(f'Processing {i + 1}/{n_list}')
@@ -1707,11 +1721,19 @@ class App(QWidget):
                     QApplication.processEvents()
                 self.fname_rc_batch[fn_short] = {'rc': rc}
                 self.img_recon_slice.append(rec)  # this is list
+                if i == 0:
+                    s = rec.shape
+                    c = s[-1] // 2
+                    r_s = max(c - 200, 0)
+                    r_e = min(c + 200, s[-1])
+                self.img_recon_slice_crop.append(rec[r_s:r_e, r_s:r_e])
 
             if len(self.img_recon_slice):
-                if self.cb1.findText('Batch recon at center slice') < 0:
-                    self.cb1.addItem('Batch recon at center slice')
-                    self.cb1.setCurrentText('Batch recon at center slice')
+                if self.cb1.findText('Batch recon at single slice') < 0:
+                    self.cb1.addItem('Batch recon at single slice')
+                if  self.cb1.findText('Batch recon at single slice (crop)') < 0:
+                    self.cb1.addItem('Batch recon at single slice (crop)')
+                    self.cb1.setCurrentText('Batch recon at single slice (crop)')
                 self.update_canvas_img()
         except Exception as err:
             self.msg = str(err)
@@ -2235,7 +2257,7 @@ class App(QWidget):
                 slide.setMaximum(max(sh[0] - 1, 0))
                 self.current_image = img_crop[0]
                 self.auto_contrast(canvas)
-            if type_index == 'Batch recon at center slice':
+            if type_index == 'Batch recon at single slice':
                 self.img_colormix_raw = np.array([])
                 canvas.rgb_flag = 0
                 canvas.x, canvas.y = [], []
@@ -2249,6 +2271,22 @@ class App(QWidget):
                 canvas.update_img_stack()
                 slide.setMaximum(max(sh - 1, 0))
                 self.current_image = self.img_recon_slice[canvas.current_img_index]
+                self.auto_contrast(canvas)
+            if type_index == 'Batch recon at single slice (crop)':
+                self.img_colormix_raw = np.array([])
+                canvas.rgb_flag = 0
+                canvas.x, canvas.y = [], []
+                canvas.axes.clear()  # this is important, to clear the current image before another imshow()
+                sh = len(self.img_recon_slice_crop)
+                img_crop = self.img_recon_slice_crop
+                canvas.img_stack = img_crop
+                canvas.special_info = None
+                canvas.current_img_index = self.sl1.value()
+                keys = list(self.fname_rc_batch.keys())
+                canvas.title = [f'{keys[i]}:   cen={self.fname_rc_batch[keys[i]]["rc"]:4.2f}' for i in range(sh)]
+                canvas.update_img_stack()
+                slide.setMaximum(max(sh - 1, 0))
+                self.current_image = img_crop
                 self.auto_contrast(canvas)
             if type_index == '3D tomo':
                 self.img_colormix_raw = np.array([])
