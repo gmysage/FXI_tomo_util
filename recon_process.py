@@ -176,6 +176,8 @@ def recon_and_save(fn,
     f.close()
 
     proj0 = (img_tomo - img_dark / dark_scale) / (img_bkg - img_dark / dark_scale)
+    proj0[np.isinf(proj0)] = 0
+    proj0[np.isnan(proj0)] = 0
     proj0[proj0<0] = 0
     rec = recon_img(proj0, angle_list, rot_cen, binning, block_list,
                     denoise_flag, snr, fw_level, algorithm, circ_mask_ratio, ml_param)
@@ -232,6 +234,7 @@ def recon_img(proj0, angle_list, rot_cen, binning=None, block_list=[], denoise_f
     img_norm = ml_denoise(img_norm, ml_param)
     proj = -np.log(img_norm)
     proj[np.isnan(proj)] = 0
+    proj[np.isinf(proj)] = 0
     if snr > 0:
         print('removing all stripe ...')
         proj = tomopy.prep.stripe.remove_all_stripe(proj, snr=snr)
@@ -308,7 +311,7 @@ def ml_denoise(prj, ml_param):
         device = ml_param.get('device')
         try:
             print('ml_denoise ...')
-            prj_ml = apply_ML_prj(prj, n_iter, filt_sz, model_path, device='cuda')
+            prj_ml = apply_ML_prj(prj, n_iter, filt_sz, model_path, device=device)
             return prj_ml
         except Exception as err:
             print(err)
