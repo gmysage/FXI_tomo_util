@@ -183,6 +183,8 @@ def recon_and_save(fn,
                     denoise_flag, snr, fw_level, algorithm, circ_mask_ratio, ml_param)
     s1 = rec.shape # (400, 1280, 1280)
     if len(roi_cen) == 2 and len(roi_size) == 2:
+        roi_cen = np.array(roi_cen) // binning
+        roi_size = np.array(roi_size) // binning
         r_s = max(0, int(roi_cen[0]-roi_size[0]/2))
         r_e = min(s1[1], r_s + int(roi_size[0]))
         c_s = max(0, int(roi_cen[1] - roi_size[1] / 2))
@@ -235,6 +237,7 @@ def recon_img(proj0, angle_list, rot_cen, binning=None, block_list=[], denoise_f
     proj = -np.log(img_norm)
     proj[np.isnan(proj)] = 0
     proj[np.isinf(proj)] = 0
+    '''
     if snr > 0:
         print('removing all stripe ...')
         proj = tomopy.prep.stripe.remove_all_stripe(proj, snr=snr)
@@ -243,8 +246,7 @@ def recon_img(proj0, angle_list, rot_cen, binning=None, block_list=[], denoise_f
     if fw_level > 0:
         print('removing all stripe ...')
         proj = tomopy.prep.stripe.remove_stripe_fw(proj, level=fw_level)
-
-    # proj = tomopy.prep.stripe.remove_stripe_fw(proj, level=5)
+    '''
     ts1 = time.time()
 
     print('reconstruction ...')
@@ -266,6 +268,10 @@ def recon_img(proj0, angle_list, rot_cen, binning=None, block_list=[], denoise_f
         if id_s >= id_e:
             break
         prj_sub = proj[:, id_s: id_e]
+        if snr > 0:
+            prj_sub = tomopy.prep.stripe.remove_all_stripe(prj_sub, snr=snr)
+        if fw_level > 0:
+            prj_sub = tomopy.prep.stripe.remove_stripe_fw(prj_sub, level=fw_level)
         prj_sub = denoise(prj_sub, denoise_flag)
         if 'astra' in algorithm:
             rec_sub = tomopy.recon(prj_sub,

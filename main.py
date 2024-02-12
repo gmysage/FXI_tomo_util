@@ -467,7 +467,7 @@ class App(QWidget):
         lb_rc_rm_strip.setFixedWidth(85)
 
         self.lb_rm_ring = QLabel()
-        self.lb_rm_ring.setText('fw level:')
+        self.lb_rm_ring.setText('snr:')
         self.lb_rm_ring.setFixedWidth(80)
         self.lb_rm_ring.setFont(self.font2)
         self.lb_rm_ring.setAlignment(QtCore.Qt.AlignRight | QtCore.Qt.AlignVCenter)
@@ -475,8 +475,8 @@ class App(QWidget):
         self.cb_rm_strip = QComboBox()
         self.cb_rm_strip.setFont(self.font2)
         self.cb_rm_strip.setFixedWidth(80)
-        self.cb_rm_strip.addItem('wavelet')
         self.cb_rm_strip.addItem('all-stripe')
+        self.cb_rm_strip.addItem('wavelet')
         self.cb_rm_strip.currentIndexChanged.connect(self.ring_remove)
 
         lb_rc_snr = QLabel()
@@ -486,7 +486,7 @@ class App(QWidget):
         lb_rc_snr.setFixedWidth(85)
 
         self.tx_rc_ring_remove = QLineEdit()
-        self.tx_rc_ring_remove.setText('9')
+        self.tx_rc_ring_remove.setText('3')
         self.tx_rc_ring_remove.setFont(self.font2)
         self.tx_rc_ring_remove.setFixedWidth(80)
         self.tx_rc_ring_remove.setValidator(QDoubleValidator())
@@ -717,6 +717,11 @@ class App(QWidget):
         self.pb_rec_b.setFont(self.font2)
         self.pb_rec_b.clicked.connect(self.recon_batch_file)
 
+        self.chkbox_napari = QCheckBox(' View in napari')
+        self.chkbox_napari.setFont(self.font2)
+        self.chkbox_napari.setFixedWidth(200)
+        self.chkbox_napari.setChecked(False)
+
         self.terminal = QPlainTextEdit()
         self.terminal.setFixedWidth(600)
         self.terminal.setFixedHeight(200)
@@ -758,6 +763,7 @@ class App(QWidget):
         hbox_rec3 = QHBoxLayout()
         hbox_rec3.addWidget(self.pb_rec_s)
         hbox_rec3.addWidget(self.pb_rec_b)
+        hbox_rec3.addWidget(self.chkbox_napari)
         hbox_rec3.addStretch()
         hbox_rec3.setAlignment(QtCore.Qt.AlignTop | QtCore.Qt.AlignLeft)
 
@@ -783,7 +789,7 @@ class App(QWidget):
     def layout_ml(self):
         lb_empty = QLabel()
         lb_empty1 = QLabel()
-        self.chkbox_ml = QCheckBox(' Apply ML during recon')
+        self.chkbox_ml = QCheckBox(' Apply ML on projection image')
         self.chkbox_ml.setFont(self.font2)
         self.chkbox_ml.setFixedWidth(200)
         self.chkbox_ml.setChecked(False)
@@ -1799,16 +1805,15 @@ class App(QWidget):
             self.update_list()
             QApplication.processEvents()
             if plot_flag:
-                if exist_napari:
+                if exist_napari and self.chkbox_napari.isChecked():
                     napari.view_image(self.img_rec_tomo)
-                else:
-                    fsave_short = fsave.split('/')[-1]
-                    sup_title = fsave_short
-                    self.canvas1.sup_title = sup_title
-                    if self.cb1.findText('3D tomo') < 0:
-                        self.cb1.addItem('3D tomo')
-                        self.cb1.setCurrentText('3D tomo')
-                    self.update_canvas_img()
+                fsave_short = fsave.split('/')[-1]
+                sup_title = fsave_short
+                self.canvas1.sup_title = sup_title
+                if self.cb1.findText('3D tomo') < 0:
+                    self.cb1.addItem('3D tomo')
+                    self.cb1.setCurrentText('3D tomo')
+                self.update_canvas_img()
             self.msg = f'{fn_short}: reconstruction finished'
         except Exception as err:
             self.msg = str(err)
