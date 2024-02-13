@@ -627,6 +627,8 @@ class App(QWidget):
         lb_empty = QLabel()
         lb_empty1 = QLabel()
         lb_empty1.setFixedHeight(10)
+        lb_empty2 = QLabel()
+        lb_empty2.setFixedWidth(10)
 
         lb_link = QLabel()
         lb_link.setText('Function applied to the "proj. files" list:')
@@ -663,10 +665,6 @@ class App(QWidget):
         self.pb_filter_reverse.setFont(self.font2)
         self.pb_filter_reverse.clicked.connect(self.filter_reverse_selection)
 
-        #lb_recon = QLabel()
-        #lb_recon.setText('3D reconstruction')
-        #lb_recon.setFont(self.font1)
-
         lb_rec_sli = QLabel()
         lb_rec_sli.setText('rec_slices:')
         lb_rec_sli.setFixedWidth(85)
@@ -681,6 +679,7 @@ class App(QWidget):
         lb_rec_bin.setText('rec_bin:')
         lb_rec_bin.setFixedWidth(85)
         lb_rec_bin.setFont(self.font2)
+        lb_rec_bin.setAlignment(QtCore.Qt.AlignRight | QtCore.Qt.AlignVCenter)
 
         self.tx_rec_bin = QLineEdit()
         self.tx_rec_bin.setFixedWidth(80)
@@ -701,11 +700,28 @@ class App(QWidget):
         lb_rec_roi_s.setText('roi size:')
         lb_rec_roi_s.setFixedWidth(85)
         lb_rec_roi_s.setFont(self.font2)
+        lb_rec_roi_s.setAlignment(QtCore.Qt.AlignRight | QtCore.Qt.AlignVCenter)
 
         self.tx_rec_roi_s = QLineEdit()
         self.tx_rec_roi_s.setFixedWidth(80)
         self.tx_rec_roi_s.setText('[]')
         self.tx_rec_roi_s.setFont(self.font2)
+
+        self.chkbox_auto_bl = QCheckBox('Auto block_list:')
+        self.chkbox_auto_bl.setFont(self.font2)
+        self.chkbox_auto_bl.setFixedWidth(120)
+        self.chkbox_auto_bl.setChecked(False)
+
+        lb_auto_bl_ratio = QLabel()
+        lb_auto_bl_ratio.setText('ratio = ')
+        lb_auto_bl_ratio.setFixedWidth(50)
+        lb_auto_bl_ratio.setFont(self.font2)
+        lb_auto_bl_ratio.setAlignment(QtCore.Qt.AlignRight | QtCore.Qt.AlignVCenter)
+
+        self.tx_auto_bl_ratio = QLineEdit()
+        self.tx_auto_bl_ratio.setFixedWidth(40)
+        self.tx_auto_bl_ratio.setText('0.5')
+        self.tx_auto_bl_ratio.setFont(self.font2)
 
         self.pb_rec_s = QPushButton('Recon single')
         self.pb_rec_s.setFixedWidth(170)
@@ -757,6 +773,10 @@ class App(QWidget):
         hbox_rec2.addWidget(self.tx_rec_roi_c)
         hbox_rec2.addWidget(lb_rec_roi_s)
         hbox_rec2.addWidget(self.tx_rec_roi_s)
+        hbox_rec2.addWidget(lb_empty2)
+        hbox_rec2.addWidget(self.chkbox_auto_bl)
+        hbox_rec2.addWidget(lb_auto_bl_ratio)
+        hbox_rec2.addWidget(self.tx_auto_bl_ratio)
         hbox_rec2.addStretch()
         hbox_rec2.setAlignment(QtCore.Qt.AlignTop | QtCore.Qt.AlignLeft)
 
@@ -1194,6 +1214,7 @@ class App(QWidget):
             steps = int(self.tx_rc_steps.text())
             sli = int(self.tx_sli_id.text())
             block_list = self._get_block_list()
+            auto_block_list = self._get_block_list_auto()
             denoise_flag = int(self.tx_rc_denoise.text())
             dark_scale = int(self.tx_rc_dark_scale.text())
             p = int(self.tx_rc_ring_remove.text())
@@ -1208,7 +1229,8 @@ class App(QWidget):
             self.img_rc, self.rc, start, stop, steps, sli = rotcen_test(fn, attr_proj,
                                    attr_flat, attr_dark, attr_angle, start, stop, steps,
                                    sli, block_list, denoise_flag, dark_scale=dark_scale,
-                                   snr=snr, fw_level=fw_level, ml_param={})
+                                   snr=snr, fw_level=fw_level, ml_param={},
+                                   auto_block_list=auto_block_list)
             self.tx_rc_start.setText(str(start))
             self.tx_rc_stop.setText(str(stop))
             self.tx_rc_steps.setText(str(steps))
@@ -1277,6 +1299,17 @@ class App(QWidget):
         except:
             block_list = []
         return block_list
+
+    def _get_block_list_auto(self):
+        r = float(self.tx_auto_bl_ratio.text())
+        auto_block_list = {}
+        if self.chkbox_auto_bl.isChecked():
+            auto_block_list['flag'] = True
+            auto_block_list['ratio'] = r
+        else:
+            auto_block_list['flag'] = False
+            auto_block_list['ratio'] = 0
+        return auto_block_list
 
     def find_rotation_center_next(self):
         try:
@@ -1647,6 +1680,7 @@ class App(QWidget):
         attr_angle = self.tx_h5_ang.text()
         attr_xeng = self.tx_h5_xeng.text()
         block_list = self._get_block_list()
+        auto_block_list = self._get_block_list_auto()
         denoise_flag = int(self.tx_rc_denoise.text())
         dark_scale = int(self.tx_rc_dark_scale.text())
         binning = int(self.tx_rec_bin.text())
@@ -1683,7 +1717,8 @@ class App(QWidget):
                        roi_cen=roi_c,
                        roi_size=roi_s,
                        return_flag=return_flag,
-                       ml_param=ml_param
+                       ml_param=ml_param,
+                       auto_block_list=auto_block_list
                        )
         if return_flag:
             return rec, fsave, rc
@@ -1771,6 +1806,7 @@ class App(QWidget):
         self.chkbox_multi_selec.setChecked(False)
         self.lst_prj_file.clearSelection()
         QApplication.processEvents()
+
     def recon_single_file(self, plot_flag):
         try:
             if self.chkbox_multi_selec.isChecked():
@@ -2160,6 +2196,9 @@ class App(QWidget):
             QApplication.processEvents()
 
 
+    def check_contrast_range(self):
+        pass
+
     def update_msg(self):
         self.lb_msg.setFont(self.font2)
         self.lb_msg.setText(self.msg)
@@ -2433,7 +2472,7 @@ class MyCanvas(FigureCanvas):
                 else:
                     self.axes.set_title(f'{self.sup_title}\n\ncurrent image: ' + str(img_index))
                 self.axes.title.set_fontsize(10)
-
+                plt.tight_layout()
                 if self.colorbar_on_flag:
                     self.add_colorbar()
                     self.colorbar_on_flag = False

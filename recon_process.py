@@ -26,7 +26,8 @@ def rotcen_test(fn,
                 snr=3,
                 fw_level=9,
                 filter_name='None',
-                ml_param = {}
+                ml_param = {},
+                auto_block_list = {}
                 ):
     f = h5py.File(fn, "r")
     tmp = np.array(f[attr_proj][0])
@@ -54,10 +55,22 @@ def rotcen_test(fn,
     img_bkg = np.median(img_bkg, axis=0, keepdims=True)
     f.close()
 
-    prj = (img_tomo - img_dark / dark_scale) / (img_bkg - img_dark / dark_scale)
-    prj = ml_denoise(prj, ml_param)
+    prj_norm = (img_tomo - img_dark / dark_scale) / (img_bkg - img_dark / dark_scale)
+    prj_norm = ml_denoise(prj_norm, ml_param)
 
-    prj_norm = -np.log(prj)
+    n_angle = len(theta)
+    total_id = np.arange(n_angle)
+    block_list_aux = retrieve_auto_block_list(prj_norm, auto_block_list)
+    idx = set(list(total_id))
+    if len(block_list):
+        idx = idx - set(list(block_list))
+    if len(block_list_aux):
+        idx = idx - set(list(block_list_aux))
+    idx = np.sort(list(idx))
+    prj_norm = prj_norm[idx]
+    theta = theta[idx]
+
+    prj_norm = -np.log(prj_norm)
     prj_norm = denoise(prj_norm, denoise_flag)
     prj_norm[np.isnan(prj_norm)] = 0
     prj_norm[np.isinf(prj_norm)] = 0
@@ -68,15 +81,19 @@ def rotcen_test(fn,
         prj_norm = prj_norm.reshape(s[0], 1, s[1])
         s = prj_norm.shape
 
+    '''
     if theta[-1] > theta[1]:
         pos = find_nearest(theta, theta[0] + np.pi)
     else:
         pos = find_nearest(theta, theta[0] - np.pi)
+    
     block_list = list(block_list) + list(np.arange(pos + 1, len(theta)))
+    
     if len(block_list):
         allow_list = list(set(np.arange(len(prj_norm))) - set(block_list))
         prj_norm = prj_norm[allow_list]
         theta = theta[allow_list]
+    '''
     if snr > 0:
         prj_norm = tomopy.prep.stripe.remove_all_stripe(prj_norm, snr=snr)
     if fw_level > 0:
@@ -141,7 +158,8 @@ def recon_and_save(fn,
                   roi_cen = [],
                   roi_size = [],
                   return_flag = True,
-                  ml_param = {}
+                  ml_param = {},
+                  auto_block_list = {},
                   ):
     print('Loading imaging data ... ')
     f = h5py.File(fn, "r")
@@ -180,7 +198,8 @@ def recon_and_save(fn,
     proj0[np.isnan(proj0)] = 0
     proj0[proj0<0] = 0
     rec = recon_img(proj0, angle_list, rot_cen, binning, block_list,
-                    denoise_flag, snr, fw_level, algorithm, circ_mask_ratio, ml_param)
+                    denoise_flag, snr, fw_level, algorithm, circ_mask_ratio,
+                    ml_param, auto_block_list)
     s1 = rec.shape # (400, 1280, 1280)
     if len(roi_cen) == 2 and len(roi_size) == 2:
         roi_cen = np.array(roi_cen) // binning
@@ -214,7 +233,7 @@ def recon_and_save(fn,
 
 
 def recon_img(proj0, angle_list, rot_cen, binning=None, block_list=[], denoise_flag=0, snr=0,
-              fw_level=0, algorithm='gridrec', circ_mask_ratio=0.95, ml_param={}):
+              fw_level=0, algorithm='gridrec', circ_mask_ratio=0.95, ml_param={}, auto_block_list={}):
     ts = time.time()
     tmp = proj0[0]
     s = [1, tmp.shape[0], tmp.shape[1]]
@@ -228,11 +247,20 @@ def recon_img(proj0, angle_list, rot_cen, binning=None, block_list=[], denoise_f
 
     n_angle = len(theta)
     total_id = np.arange(n_angle)
+
+    block_list_aux = retrieve_auto_block_list(img_norm, auto_block_list)
+
+    idx = set(list(total_id))
+
     if len(block_list):
-        idx = set(list(total_id)) - set(list(block_list))
-        idx = np.sort(list(idx))
-        img_norm = img_norm[idx]
-        theta = theta[idx]
+        idx = idx - set(list(block_list))
+
+    if len(block_list_aux):
+        idx = idx - set(list(block_list_aux))
+    idx = np.sort(list(idx))
+    img_norm = img_norm[idx]
+    theta = theta[idx]
+
     img_norm = ml_denoise(img_norm, ml_param)
     proj = -np.log(img_norm)
     proj[np.isnan(proj)] = 0
@@ -325,6 +353,17 @@ def ml_denoise(prj, ml_param):
     else:
         return prj
 
+
+def retrieve_auto_block_list(prj_norm, auto_block_list):
+    if len(auto_block_list) == 0:
+        return []
+    elif auto_block_list['flag'] == False:
+        return []
+    else:
+        r = auto_block_list['ratio']
+    img_sum = np.sum(prj_norm, axis=(1, 2))
+    idx = np.where(img_sum < img_sum[0] * r)
+    return idx[0]
 def bin_image_stack(img_stack, binning=1):
     if binning == 1:
         return img_stack
