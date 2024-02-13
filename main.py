@@ -1035,16 +1035,16 @@ class App(QWidget):
             model_path = self.tx_ml_model.text()
 
             self.proj_ml = apply_ML_prj(proj_norm, n_iter, filt_sz, model_path, device)
-            if exist_napari:
+            if exist_napari and self.chkbox_napari.isChecked():
                 napari.view_image(proj_norm, title='Raw')
                 napari.view_image(self.proj_ml, title='ML')
-            else:
-                sup_title = fn_short
-                self.canvas1.sup_title = sup_title
-                if self.cb1.findText('proj vs. proj_ml (raw)') < 0:
-                    self.cb1.addItem('proj vs. proj_ml (raw)')
-                    self.cb1.addItem('proj vs. proj_ml (ml)')
-                self.update_canvas_img()
+
+            sup_title = fn_short
+            self.canvas1.sup_title = sup_title
+            if self.cb1.findText('proj vs. proj_ml (raw)') < 0:
+                self.cb1.addItem('proj vs. proj_ml (raw)')
+                self.cb1.addItem('proj vs. proj_ml (ml)')
+            self.update_canvas_img()
             self.msg = f'{fn_short}: ML applied to projection image'
         except Exception as err:
             self.msg = str(err)
