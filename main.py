@@ -451,7 +451,7 @@ class App(QWidget):
         lb_rc_algorithm = QLabel()
         lb_rc_algorithm.setText('Algorithm:')
         lb_rc_algorithm.setFont(self.font2)
-        lb_rc_algorithm.setFixedWidth(80)
+        lb_rc_algorithm.setFixedWidth(85)
         lb_rc_algorithm.setAlignment(QtCore.Qt.AlignRight | QtCore.Qt.AlignVCenter)
 
         self.cb_rc_algorithm = QComboBox()
@@ -468,7 +468,7 @@ class App(QWidget):
 
         self.lb_rm_ring = QLabel()
         self.lb_rm_ring.setText('snr:')
-        self.lb_rm_ring.setFixedWidth(80)
+        self.lb_rm_ring.setFixedWidth(85)
         self.lb_rm_ring.setFont(self.font2)
         self.lb_rm_ring.setAlignment(QtCore.Qt.AlignRight | QtCore.Qt.AlignVCenter)
 
@@ -534,7 +534,7 @@ class App(QWidget):
         #self.pb_rc_find.clicked.connect(self.click_find_rc)
 
         self.pb_rc_find_next = QPushButton('Next')
-        self.pb_rc_find_next.setFixedWidth(110)
+        self.pb_rc_find_next.setFixedWidth(115)
         self.pb_rc_find_next.setFixedHeight(40)
         self.pb_rc_find_next.setFont(self.font1)
         self.pb_rc_find_next.setStyleSheet('color: rgb(50, 50, 250);')
@@ -559,7 +559,7 @@ class App(QWidget):
         self.chkbox_new_file.setChecked(False)
 
         self.pb_rc_1_sli = QPushButton('recon 1 slice')
-        self.pb_rc_1_sli.setFixedWidth(110)
+        self.pb_rc_1_sli.setFixedWidth(115)
         self.pb_rc_1_sli.setFixedHeight(40)
         self.pb_rc_1_sli.setFont(self.font2)
         self.pb_rc_1_sli.clicked.connect(self.recon_1_slice)
@@ -743,6 +743,11 @@ class App(QWidget):
         self.terminal.setFixedHeight(200)
         self.terminal.setFont(self.font2)
 
+        self.pb_rec_view = QPushButton('View 3D recon')
+        self.pb_rec_view.setFixedWidth(170)
+        self.pb_rec_view.setFont(self.font2)
+        self.pb_rec_view.clicked.connect(self.view_3D_recon)
+
         if exist_pyxas:
             vbox_ml = self.layout_ml()
 
@@ -787,6 +792,12 @@ class App(QWidget):
         hbox_rec3.addStretch()
         hbox_rec3.setAlignment(QtCore.Qt.AlignTop | QtCore.Qt.AlignLeft)
 
+        vbox_rec_view = QVBoxLayout()
+        vbox_rec_view.addLayout(hbox_rec3)
+        vbox_rec_view.addWidget(self.pb_rec_view)
+        vbox_rec_view.addStretch()
+        vbox_rec_view.setAlignment(QtCore.Qt.AlignTop | QtCore.Qt.AlignLeft)
+
         vbox_rec = QVBoxLayout()
         #vbox_rec.addWidget(lb_recon)
         vbox_rec.addLayout(vbox_link)
@@ -796,7 +807,7 @@ class App(QWidget):
         vbox_rec.addLayout(hbox_rec2)
         if exist_pyxas:
             vbox_rec.addLayout(vbox_ml)
-        vbox_rec.addLayout(hbox_rec3)
+        vbox_rec.addLayout(vbox_rec_view)
         #vbox_rec.addWidget(self.terminal)
 
         vbox_rec.addWidget(lb_empty)
@@ -811,7 +822,7 @@ class App(QWidget):
         lb_empty1 = QLabel()
         self.chkbox_ml = QCheckBox(' Apply ML on projection image')
         self.chkbox_ml.setFont(self.font2)
-        self.chkbox_ml.setFixedWidth(200)
+        self.chkbox_ml.setFixedWidth(220)
         self.chkbox_ml.setChecked(False)
         self.chkbox_ml.stateChanged.connect(self.ml_check_model)
 
@@ -1187,7 +1198,7 @@ class App(QWidget):
             fn_short = tx_current.split(':')[0]
             current_rc, recon_flag = self.check_fname_rc_states(fn_short)
             if current_rc != 0:
-                if recon_flag == 'Y':
+                if not recon_flag is None and recon_flag[0] == 'Y':
                     txt = f'{fn_short}:    {current_rc:3.2f}    (recon)'
                 else:
                     txt = f'{fn_short}:    {current_rc:3.2f}'
@@ -1836,7 +1847,7 @@ class App(QWidget):
                                                                    fsave_prefix, return_flag=True)
             '''
             self.img_rec_tomo, fsave, rc = self.recon_single_file_core(fn)
-            recon_flag = 'Y'
+            recon_flag = f'Y: {fsave}'
             self.update_fname_rc(fn_short, rc, recon_flag)
             self.update_list()
             QApplication.processEvents()
@@ -1896,7 +1907,48 @@ class App(QWidget):
             self.update_msg()
             QApplication.processEvents()
 
+    def view_3D_recon(self):
+        try:
+            if self.chkbox_multi_selec.isChecked():
+                self.set_single_selection()
+                return 0
+            self.pb_rec_view.setEnabled(False)
+            QApplication.processEvents()
+            item = self.lst_prj_file.selectedItems()
+            fn_short = item[0].text()
+            fn_short = fn_short.split(':')[0]
+            recon_flag = self.fname_rc[fn_short]['recon_flag']
+            if not recon_flag is None:
+                fn_recon = recon_flag.split(':')[-1].replace(' ', '')
+                file_type = fn_recon.split('.')[-1]
+                if file_type == 'tiff' or file_type == 'tif':
+                    self.img_rec_tomo = io.imread(fn_recon)
+                elif file_type == 'h5':
+                    with h5py.File(fn_recon, 'r') as hf:
+                        self.img_rec_tomo = np.array(hf['img'])
+                else:
+                    self.msg = 'fail in loading image file'
+                    self.update_msg()
+                    return 0
+                if exist_napari and self.chkbox_napari.isChecked():
+                    napari.view_image(self.img_rec_tomo)
+                fn_recon_short = fn_recon.split('/')[-1]
+                sup_title = fn_recon_short
+                self.canvas1.sup_title = sup_title
+                if self.cb1.findText('3D tomo') < 0:
+                    self.cb1.addItem('3D tomo')
+                    self.cb1.setCurrentText('3D tomo')
+                self.update_canvas_img()
 
+                self.msg = f'view {fn_recon_short}'
+            else:
+                self.msg = 'fail in loading image file'
+        except Exception as err:
+            self.msg = str(err)
+        finally:
+            self.update_msg()
+            self.pb_rec_view.setEnabled(True)
+            QApplication.processEvents()
 
     def enable_multi_selection(self):
         if  self.chkbox_multi_selec.isChecked():
@@ -2472,7 +2524,8 @@ class MyCanvas(FigureCanvas):
                 else:
                     self.axes.set_title(f'{self.sup_title}\n\ncurrent image: ' + str(img_index))
                 self.axes.title.set_fontsize(10)
-                plt.tight_layout()
+
+                #plt.tight_layout()
                 if self.colorbar_on_flag:
                     self.add_colorbar()
                     self.colorbar_on_flag = False
