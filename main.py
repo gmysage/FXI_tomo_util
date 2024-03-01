@@ -147,7 +147,7 @@ class App(QWidget):
         lb_ld.setFixedWidth(100)
 
         self.lb_prj_path = QLabel()
-        self.lb_prj_path.setFixedWidth(400)
+        self.lb_prj_path.setFixedWidth(450)
         self.lb_prj_path.setFont(self.font2)
         self.lb_prj_path.setStyleSheet('background: rgb(240, 240, 220);')
 
@@ -157,7 +157,7 @@ class App(QWidget):
         self.pb_open_prj.clicked.connect(self.open_prj_file)
 
         self.pb_refresh_prj = QPushButton('Reload current folder')
-        self.pb_refresh_prj.setFixedWidth(200)
+        self.pb_refresh_prj.setFixedWidth(170)
         self.pb_refresh_prj.setFont(self.font2)
         self.pb_refresh_prj.clicked.connect(self.refresh_file_folder)
 
@@ -168,7 +168,7 @@ class App(QWidget):
         lb_prefix.setFixedWidth(100)
 
         self.tx_prefix = QLineEdit()
-        self.tx_prefix.setFixedWidth(80)
+        self.tx_prefix.setFixedWidth(60)
         self.tx_prefix.setText('fly')
         self.tx_prefix.setFont(self.font2)
 
@@ -290,15 +290,20 @@ class App(QWidget):
         self.tx_h5_sid.setText('scan_id')
         self.tx_h5_sid.setFont(self.font2)
 
-        self.pb_rc_view_prj = QPushButton('View projection')
+        self.pb_rc_view_prj = QPushButton('View proj.')
         self.pb_rc_view_prj.setFont(self.font2)
         self.pb_rc_view_prj.clicked.connect(self.view_projection_images)
-        self.pb_rc_view_prj.setFixedWidth(170)
+        self.pb_rc_view_prj.setFixedWidth(110)
 
-        self.pb_clear_list = QPushButton('Clear file list')
-        self.pb_clear_list.setFixedWidth(170)
+        self.pb_clear_list = QPushButton('Delete all')
+        self.pb_clear_list.setFixedWidth(115)
         self.pb_clear_list.setFont(self.font2)
         self.pb_clear_list.clicked.connect(self.clear_file_list)
+
+        self.pb_del_list_item = QPushButton('Delete')
+        self.pb_del_list_item.setFixedWidth(110)
+        self.pb_del_list_item.setFont(self.font2)
+        self.pb_del_list_item.clicked.connect(self.del_list_item)
 
         hbox_rc_h51 = QHBoxLayout()
         hbox_rc_h51.addWidget(lb_h5_prj)
@@ -326,6 +331,7 @@ class App(QWidget):
 
         hbox_pb = QHBoxLayout()
         hbox_pb.addWidget(self.pb_rc_view_prj)
+        hbox_pb.addWidget(self.pb_del_list_item)
         hbox_pb.addWidget(self.pb_clear_list)
         hbox_pb.setAlignment(QtCore.Qt.AlignTop | QtCore.Qt.AlignLeft)
 
@@ -720,7 +726,7 @@ class App(QWidget):
 
         self.tx_auto_bl_ratio = QLineEdit()
         self.tx_auto_bl_ratio.setFixedWidth(40)
-        self.tx_auto_bl_ratio.setText('0.5')
+        self.tx_auto_bl_ratio.setText('0.4')
         self.tx_auto_bl_ratio.setFont(self.font2)
 
         self.pb_rec_s = QPushButton('Recon single')
@@ -842,7 +848,7 @@ class App(QWidget):
         self.tx_ml_model.setFont(self.font2)
 
         self.pb_ml_model_test = QPushButton('Test on selected projection file')
-        self.pb_ml_model_test.setFixedWidth(350)
+        self.pb_ml_model_test.setFixedWidth(345)
         self.pb_ml_model_test.setFont(self.font2)
         self.pb_ml_model_test.clicked.connect(self.ml_test_proj)
 
@@ -1133,6 +1139,21 @@ class App(QWidget):
         self.file_loaded = []
         self.update_list()
 
+    def del_list_item(self):
+        try:
+            item = self.lst_prj_file.selectedItems()
+            n = len(item)
+            for i in range(n):
+                fn_short = item[i].text()
+                fn_short = fn_short.split(':')[0]
+                if fn_short in self.fname_rc.keys():
+                    self.remove_fname_rc(fn_short)
+            self.update_list()
+            self.msg = f'deleted {fn_short}'
+        except Exception as err:
+            self.msg = str(err)
+        finally:
+            self.update_msg()
 
     def filter_selection_all(self):
         self.lst_prj_file.selectAll()
@@ -1374,13 +1395,16 @@ class App(QWidget):
         else:
             self.fname_rc[fn_short] = {'rc': rc, 'recon_flag': recon_flag, 'full_path': full_path}
 
+    def remove_fname_rc(self, fn_short):
+        self.fname_rc.pop(fn_short, f'{fn_short} not exist')
 
     def update_rotation_center(self):
         try:
             rc = float(self.tx_rc_mod.text())
-            items = self.lst_prj_file.selectedItems()
-            for item in items:
-                fn_short = item.text()
+            item = self.lst_prj_file.selectedItems()
+            n = len(item)
+            for i in range(n):
+                fn_short = item[i].text()
                 fn_short = fn_short.split(':')[0]
                 if fn_short in self.fname_rc.keys():
                     self.update_fname_rc(fn_short, rc, None)
@@ -1627,7 +1651,7 @@ class App(QWidget):
             self.msg = str(err)
         finally:
             self.pb_rc_view_prj.setEnabled(True)
-            self.pb_rc_view_prj.setText('View projection')
+            self.pb_rc_view_prj.setText('View proj.')
             self.update_msg()
 
     def load_proj_file(self, fn):
