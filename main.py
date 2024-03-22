@@ -1465,11 +1465,11 @@ class App(QWidget):
                 self.tx_sli_id.setText(str(sli))
                 QApplication.processEvents()
                 self.img_recon_slice.append(rec)
-                if i == 0:
-                    s = rec.shape
-                    c = s[-1] // 2
-                    r_s = max(c - 200, 0)
-                    r_e = min(c + 200, s[-1])
+                
+                s = rec.shape
+                c = s[-1] // 2
+                r_s = max(c - 200, 0)
+                r_e = min(c + 200, s[-1])
                 self.img_recon_slice_crop.append(rec[r_s:r_e, r_s:r_e])
 
             #self.img_recon_slice = np.array(self.img_recon_slice)
