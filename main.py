@@ -1780,7 +1780,7 @@ class App(QWidget):
             self.img_recon_slice_crop = []
             self.fname_rc_batch = {}
             for i in range(n_list):
-                self.pb_rc_1_sli.setText(f'Processing {i + 1}/{n_list}')
+                self.pb_rc_1_sli.setText(f'recon {i + 1}/{n_list}')
                 QApplication.processEvents()
                 item = self.lst_prj_file.item(i)
                 tx_current = item.text()  # e.g. 'fly_scan_123:  640'
