@@ -56,7 +56,7 @@ class App(QWidget):
         screen_resolution = QApplication.desktop().screenGeometry()
         width, height = screen_resolution.width(), screen_resolution.height()
         self.width = 1000
-        self.height = 800
+        self.height = 900
         self.left = (width - self.width) // 2
         self.top = (height - self.height) // 2
         self._err_color = QtCore.Qt.red
@@ -1410,7 +1410,8 @@ class App(QWidget):
                     self.update_fname_rc(fn_short, rc, None)
             self.update_list()
             self.msg = f'rotation center updated for {fn_short}: {rc}'
-        except:
+        except Exception as err:
+            print(err)
             self.msg = 'rotation center should be a float number'
         finally:
             self.update_msg()
@@ -2456,7 +2457,7 @@ class App(QWidget):
             print(err)
 
 class MyCanvas(FigureCanvas):
-    def __init__(self, parent=None, width=5, height=3, dpi=120, obj=[]):
+    def __init__(self, parent=None, width=5, height=5, dpi=110, obj=[]):
         self.obj = obj
         self.fig = Figure(figsize=(width, height), dpi=dpi)
         self.axes = self.fig.add_subplot(111)
@@ -2550,7 +2551,7 @@ class MyCanvas(FigureCanvas):
                     self.axes.set_title(f'{self.sup_title}\n\ncurrent image: ' + str(img_index))
                 self.axes.title.set_fontsize(10)
 
-                #plt.tight_layout()
+                plt.tight_layout()
                 if self.colorbar_on_flag:
                     self.add_colorbar()
                     self.colorbar_on_flag = False
