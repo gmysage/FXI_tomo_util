@@ -2368,8 +2368,9 @@ class App(QWidget):
                 canvas.axes.clear()  # this is important, to clear the current image before another imshow()
                 sh = self.img_rc.shape
                 c = sh[-1] // 2
-                r_s = max(c - 200, 0)
-                r_e = min(c + 200, sh[-1])
+                d = sh[-1] // 4
+                r_s = max(c - d, 0)
+                r_e = min(c + d, sh[-1])
                 img_crop = self.img_rc[:, r_s:r_e, r_s:r_e]
                 canvas.img_stack = img_crop
                 canvas.special_info = None
