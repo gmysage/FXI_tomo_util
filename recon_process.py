@@ -5,12 +5,208 @@ import time
 from tqdm import tqdm, trange
 import skimage.restoration as skr
 from skimage.filters import gaussian as gf
+from scipy.signal import correlate
+from scipy.interpolate import UnivariateSpline
 try:
     from pyxas_util import *
     import pyxas
     exist_pyxas = True
 except:
     exist_pyxas = False
+    
+
+
+
+def find_cen(fn):
+    img, cen = test_center(fn, print_flag=0, circ_mask_ratio=0.8)
+    cor = cal_corr_stack(img)
+    cor = cor / np.median(cor)
+    cen = (cen[:-1] + cen[1:] ) /2
+    #res = fit_peak_curve_poly(cen, cor, 5)
+    res = fit_peak_curve_spline(cen, cor, 3, 0.0001)
+    #xx=res['xx']; spl=res['spl']; plt.figure();plt.plot(xx, spl(xx));plt.plot(cen, cor, '.')
+    peak = float(res['peak_pos'])    
+    start = peak - 5
+    stop = peak + 5
+    steps = 21
+    img, cen = test_center(fn, start, stop, steps, print_flag=0)
+    cen = (cen[:-1] + cen[1:] ) /2
+    cor = cal_corr_stack(img)    
+    res = fit_peak_curve_spline(cen, cor, 3, 0.0001)
+    peak = float(res['peak_pos'])
+    fn_short = fn.split('/')[-1]
+    print(f'{fn_short}: {peak}')
+    return peak
+    
+
+
+def cal_corr_stack(img_stack, frac=0.5):
+    img = img_stack.copy()
+    img[img<0] = 0
+    s = img.shape
+    n = s[0] - 1
+    lr = int(s[1] * frac)
+    rs = int(s[1] * (frac/2))
+    re = rs + lr
+    
+    lc = int(s[2] * frac)
+    cs = int(s[2] * (frac/2))
+    ce = cs + lc
+    cor = np.zeros(n)
+    for i in range(n):
+        img1 = img[i, rs:re, cs:ce]
+        img2 = img[i+1, rs:re, cs:ce]
+        img1 = img1 / np.sum(img1)
+        img2 = img2 / np.sum(img2)
+        cor[i] = np.sum(img1 * img2)
+    return cor
+
+
+
+def test_center(
+    fn,
+    start=None,
+    stop=None,
+    steps=None,
+    sli=0,
+    block_list=[],
+    fw_level=9,
+    circ_mask_ratio=0.95,
+    dark_scale=1,
+    snr=3,
+    print_flag=1,
+):
+    import tomopy
+    
+    f = h5py.File(fn, "r")
+    tmp = np.array(f["img_tomo"][0])
+    s = [1, tmp.shape[0], tmp.shape[1]]
+
+
+    if sli == 0:
+        sli = int(s[1] / 2)
+
+    tomo_angle = np.array(f["angle"]) 
+    theta = tomo_angle / 180.0 * np.pi
+    img_tomo = np.array(f["img_tomo"][:, sli:sli+1, :])
+
+    img_bkg = np.array(f["img_bkg_avg"][:, sli:sli+1, :])
+    img_dark = np.array(f["img_dark_avg"][:, sli:sli+1, :]) / dark_scale
+    prj = (img_tomo - img_dark) / (img_bkg - img_dark)
+    prj_norm = -np.log(prj)
+    f.close()
+
+    prj_norm[np.isnan(prj_norm)] = 0
+    prj_norm[np.isinf(prj_norm)] = 0
+    prj_norm[prj_norm < 0] = 0
+
+    prj_norm = tomopy.prep.stripe.remove_stripe_fw(prj_norm, level=fw_level, wname="db5", sigma=1, pad=True)
+
+    #prj_norm = tomopy.prep.stripe.remove_all_stripe(prj_norm, snr=snr)
+   
+    s = prj_norm.shape
+    if len(s) == 2:
+        prj_norm = prj_norm.reshape(s[0], 1, s[1])
+        s = prj_norm.shape
+
+    if theta[-1] > theta[1]:
+        pos = find_nearest(theta, theta[0] + np.pi)
+    else:
+        pos = find_nearest(theta, theta[0] - np.pi)
+    block_list = list(block_list) + list(np.arange(pos + 1, len(theta)))
+    if len(block_list):
+        allow_list = list(set(np.arange(len(prj_norm))) - set(block_list))
+        prj_norm = prj_norm[allow_list]
+        theta = theta[allow_list]
+
+    
+    if start == None or stop == None or steps == None:
+        start = int(s[2] / 2 - 50)
+        stop = int(s[2] / 2 + 50)
+        steps = 26
+    cen = np.linspace(start, stop, steps)
+    img = np.zeros([len(cen), s[2], s[2]])
+    for i in range(len(cen)):
+        if print_flag:
+            print("{}: rotcen {}".format(i + 1, cen[i]))
+        img[i] = tomopy.recon(
+        prj_norm,
+        theta,
+        center=cen[i],
+        algorithm="gridrec",
+        )
+
+    img = tomopy.circ_mask(img, axis=0, ratio=circ_mask_ratio)
+    return img, cen
+    
+    
+    
+def fit_peak_curve_poly(x, y, fit_order=3):
+    '''
+    x, y can be matrix
+    '''
+
+    #x_min, x_max = np.min(x), np.max(x)
+    s1 = len(y)
+    if len(y.shape) == 1:
+        Y = y.reshape([s1, 1])
+    else:
+        Y = y
+    if len(x.shape) == 1:
+        x0 = x.reshape([s1, 1])
+    else:
+        x0 = x
+    #x0 = (x0 - x_min) / (x_max - x_min)
+    X = np.ones([s1, 1])
+    for i in np.arange(1, fit_order + 1):
+        X = np.concatenate([X, x0 ** i], 1)
+    A = np.linalg.inv(X.T @ X) @ (X.T @ Y)
+    xx = np.linspace(x0[0], x0[-1], 101).reshape([101, 1])
+    XX = np.ones([101, 1])
+    for i in np.arange(1, fit_order + 1):
+        XX = np.concatenate([XX, xx ** i], 1)
+    YY = XX @ A
+    #peak_pos = xx[np.argmax(YY, 0)] * (x_max - x_min) + x_min
+    peak_pos = xx[np.argmax(YY, 0)]
+    y_hat = X @ A
+    fit_error = np.sum((y_hat - Y)**2, 0)
+    res = {}
+    res['peak_pos'] = peak_pos
+    res['peak_val'] = np.max(YY, 0)
+    res['fit_error'] = fit_error
+    res['matrix_X'] = XX
+    res['matrix_A'] = A
+    res['matrix_Y'] = YY
+    res['x_interp'] = xx
+
+    return res
+
+
+def fit_peak_curve_spline(x, y, fit_order=3, smooth=0.002, weight=[1]):
+    if not len(weight) == len(x):
+        weight = np.ones((len(x)))
+    spl = UnivariateSpline(x, y, k=fit_order, s=smooth, w=weight)
+    xx = np.linspace(x[0], x[-1], 1001)
+    yy = spl(xx)
+    peak_pos = xx[np.argmax(yy)]
+    fit_error = np.sum((y - spl(x)**2))
+    edge_pos = xx[np.argmax(np.abs(np.diff(spl(xx))))]
+    res = {}
+    res['peak_pos'] = peak_pos
+    res['peak_val'] = spl(peak_pos)
+    res['edge_pos'] = edge_pos
+    res['edge_val'] = spl(edge_pos)
+    res['fit_error'] = fit_error
+    res['spl'] = spl
+    res['xx'] = xx
+    return res
+    
+    
+def find_nearest(data, x):
+    tmp = np.abs(data-x)
+    return np.argmin(tmp)
+    
+    
 def rotcen_test(fn,
                 attr_proj='img_tomo',
                 attr_flat='img_bkg',

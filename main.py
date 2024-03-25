@@ -127,6 +127,7 @@ class App(QWidget):
         self.msg = ''
         self.flag_rc = False
         self.rc = ''
+        self.fn_rc_tmp = ''
         self.file_loaded = []
         self.fname_rc = {}
         self.fname_rc_batch = {}
@@ -1117,6 +1118,7 @@ class App(QWidget):
             self.fname_rc.update(file_dict)
             self.file_loaded.append(file_loaded)
             self.update_list()
+            self.fn_rc_tmp = ''
 
     def refresh_file_folder(self):
         file_dict = {}
@@ -1506,6 +1508,7 @@ class App(QWidget):
         sli = int(self.tx_sli_id.text())
         with h5py.File(fn, 'r') as hf:
             try:
+                '''
                 img_flat = np.array(hf[attr_flat])
                 if len(img_flat.shape) == 2:
                     img_flat = np.expand_dims(img_flat, axis=0)
@@ -1537,7 +1540,8 @@ class App(QWidget):
                 cshft = -tmat[0, 2]
                 s = img0.shape
                 rot_cen = s[1] / 2 + cshft / 2 - 1
-
+                '''
+                rot_cen = find_cen(fn)
                 if sli == 0:
                     sli = s[1]//2
                 sino_prj = np.array(list(hf[attr_proj][:, sli:sli+1]))
@@ -1558,6 +1562,21 @@ class App(QWidget):
         return rot_cen, sino_norm, theta, sli
 
 
+    def save_rotation_center_tmp(self):
+        if len(self.fn_rc_tmp):
+            fn = self.fn_rc_tmp
+        else:
+            fpath_current = self.lb_prj_path.text().strip(' ')
+            fn = fpath_current + '/rc_tmp.json'
+        try:
+            if fn[-5:] != '.json':
+                fn += '.json'
+        except:
+            fn += '.json'
+        dict_to_save = self.fname_rc.copy()
+        with open(fn, 'w') as json_file:
+            json_file.write(json.dumps(dict_to_save))
+                
 
     def save_rotation_center(self):
         options = QFileDialog.Option()
@@ -1565,12 +1584,13 @@ class App(QWidget):
         file_type = 'json files (*.json)'
         try:
             fn, _ = QFileDialog.getSaveFileName(self, 'Save File', "", file_type, options=options)
-            if fn:
+            if fn:                
                 try:
                     if fn[-5:] != '.json':
                         fn += '.json'
                 except:
                     fn += '.json'
+                self.fn_rc_tmp = fn
                 dict_to_save = self.fname_rc.copy()
                 with open(fn, 'w') as json_file:
                     json_file.write(json.dumps(dict_to_save))
@@ -1918,6 +1938,7 @@ class App(QWidget):
                     recon_flag = 'Y'
                     self.update_fname_rc(fn_short, rc, recon_flag)
                     self.update_list()
+                    self.save_rotation_center_tmp()
                     QApplication.processEvents()
                     self.msg = 'reconstruction finished'
                 except Exception as err:
