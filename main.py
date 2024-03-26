@@ -291,20 +291,25 @@ class App(QWidget):
         self.tx_h5_sid.setText('scan_id')
         self.tx_h5_sid.setFont(self.font2)
 
-        self.pb_rc_view_prj = QPushButton('View proj.')
+        self.pb_rc_view_prj = QPushButton('View proj. image')
         self.pb_rc_view_prj.setFont(self.font2)
         self.pb_rc_view_prj.clicked.connect(self.view_projection_images)
-        self.pb_rc_view_prj.setFixedWidth(110)
+        self.pb_rc_view_prj.setFixedWidth(170)
 
         self.pb_clear_list = QPushButton('Delete all')
-        self.pb_clear_list.setFixedWidth(115)
+        self.pb_clear_list.setFixedWidth(170)
         self.pb_clear_list.setFont(self.font2)
         self.pb_clear_list.clicked.connect(self.clear_file_list)
 
         self.pb_del_list_item = QPushButton('Delete')
-        self.pb_del_list_item.setFixedWidth(110)
+        self.pb_del_list_item.setFixedWidth(170)
         self.pb_del_list_item.setFont(self.font2)
         self.pb_del_list_item.clicked.connect(self.del_list_item)
+
+        self.pb_rec_view_copy = QPushButton('View recon (if exist)')
+        self.pb_rec_view_copy.setFont(self.font2)
+        self.pb_rec_view_copy.clicked.connect(self.view_3D_recon)
+        self.pb_rec_view_copy.setFixedWidth(170)
 
         hbox_rc_h51 = QHBoxLayout()
         hbox_rc_h51.addWidget(lb_h5_prj)
@@ -330,11 +335,15 @@ class App(QWidget):
         hbox_rc_h53.addStretch()
         hbox_rc_h53.setAlignment(QtCore.Qt.AlignTop | QtCore.Qt.AlignLeft)
 
-        hbox_pb = QHBoxLayout()
-        hbox_pb.addWidget(self.pb_rc_view_prj)
-        hbox_pb.addWidget(self.pb_del_list_item)
-        hbox_pb.addWidget(self.pb_clear_list)
-        hbox_pb.setAlignment(QtCore.Qt.AlignTop | QtCore.Qt.AlignLeft)
+        hbox_pb_view = QHBoxLayout()
+        hbox_pb_view.addWidget(self.pb_rc_view_prj)
+        hbox_pb_view.addWidget(self.pb_rec_view_copy)
+        hbox_pb_view.setAlignment(QtCore.Qt.AlignTop | QtCore.Qt.AlignLeft)
+
+        hbox_pb_del = QHBoxLayout()
+        hbox_pb_del.addWidget(self.pb_del_list_item)
+        hbox_pb_del.addWidget(self.pb_clear_list)
+        hbox_pb_del.setAlignment(QtCore.Qt.AlignTop | QtCore.Qt.AlignLeft)
 
         vbox_file = QVBoxLayout()
         vbox_file.addWidget(lb_prj_file)
@@ -346,7 +355,8 @@ class App(QWidget):
         vbox.addLayout(hbox_rc_h51)
         vbox.addLayout(hbox_rc_h52)
         vbox.addLayout(hbox_rc_h53)
-        vbox.addLayout(hbox_pb)
+        vbox.addLayout(hbox_pb_view)
+        vbox.addLayout(hbox_pb_del)
         vbox.addWidget(lb_empty2)
         vbox.addStretch()
         return vbox
@@ -1128,11 +1138,14 @@ class App(QWidget):
         file_loaded = retrieve_file_type(file_root_path, file_prefix, file_type)
         num = len(file_loaded)
         self.lb_prj_path.setText('   ' + file_root_path)
+        exist_files = self.fname_rc.keys()
         for i in range(num):
             full_path = file_loaded[i]
             fn_short = full_path.split('/')[-1]
-            file_dict[fn_short] = {'rc': 0, 'recon_flag': None, 'full_path': full_path}
+            if not fn_short in exist_files: 
+                file_dict[fn_short] = {'rc': 0, 'recon_flag': None, 'full_path': full_path}
         self.fname_rc.update(file_dict)
+        self.fname_rc = dict(sorted(self.fname_rc.items()))
         self.file_loaded.append(file_loaded)
         self.update_list()
 
@@ -1181,7 +1194,8 @@ class App(QWidget):
         for i in range(n_list):
             item = self.lst_prj_file.item(i)
             fn_short = item.text().split(':')[0]
-            if self.fname_rc[fn_short]['recon_flag'] == 'Y':
+            recon_flag = self.fname_rc[fn_short]['recon_flag']
+            if not recon_flag is None:
                 self.lst_prj_file.setItemSelected(item, True)
             else:
                 self.lst_prj_file.setItemSelected(item, False)
@@ -1297,6 +1311,7 @@ class App(QWidget):
         self.current_file_short = fn_short
         self.pb_rc_find.setEnabled(False)
         self.pb_rc_find.setText('wait ...')
+        self.pb_rc_find.setStyleSheet('color: rgb(200, 200, 200);')
         QApplication.processEvents()
         try:
             self.find_rotation_center_core(fn)
@@ -1315,6 +1330,7 @@ class App(QWidget):
         finally:
             self.pb_rc_find.setEnabled(True)
             self.pb_rc_find.setText('Find center')
+            self.pb_rc_find.setStyleSheet('color: rgb(50, 50, 250);')
             self.update_msg()
             QApplication.processEvents()
 
@@ -1349,6 +1365,7 @@ class App(QWidget):
         try:
             self.pb_rc_find_next.setText('wait ...')
             self.pb_rc_find_next.setEnabled(False)
+            self.pb_rc_find_next.setStyleSheet('color: rgb(200, 200, 200);')
             n_list = self.lst_prj_file.count()
             item = self.lst_prj_file.selectedItems()[0]
             item_idx = self.lst_prj_file.indexFromItem(item).row()
@@ -1364,6 +1381,7 @@ class App(QWidget):
         finally:
             self.pb_rc_find_next.setText('Next')
             self.pb_rc_find_next.setEnabled(True)
+            self.pb_rc_find_next.setStyleSheet('color: rgb(50, 50, 250);')
             self.update_msg()
 
 
@@ -1509,6 +1527,8 @@ class App(QWidget):
         with h5py.File(fn, 'r') as hf:
             try:
                 ang = np.array(hf[attr_angle])  # in unit of degrees
+                img0 = np.array(list(hf[attr_proj][0]))
+                s = img0.shape
                 '''
                 img_flat = np.array(hf[attr_flat])
                 if len(img_flat.shape) == 2:
@@ -1524,7 +1544,7 @@ class App(QWidget):
                     tmp = np.abs(ang - ang[0] - 180).argmin()
                 else:  # e.g.,rotate from -90 - 90 deg
                     tmp = np.abs(ang - np.abs(ang[0])).argmin()
-                img0 = np.array(list(hf[attr_proj][0]))
+                
                 img180_raw = np.array(list(hf[attr_proj][tmp]))
                 img0 = (img0 - img_dark_avg)/(img_flat_avg - img_dark_avg)
                 img180_raw = (img180_raw - img_dark_avg) / (img_flat_avg - img_dark_avg)
@@ -1538,7 +1558,7 @@ class App(QWidget):
                 tmat = sr.register(im0, im1)
                 rshft = -tmat[1, 2]
                 cshft = -tmat[0, 2]
-                s = img0.shape
+                
                 rot_cen = s[1] / 2 + cshft / 2 - 1
                 '''
                 rot_cen = find_cen(fn)
@@ -1575,7 +1595,7 @@ class App(QWidget):
             fn += '.json'
         dict_to_save = self.fname_rc.copy()
         with open(fn, 'w') as json_file:
-            json_file.write(json.dumps(dict_to_save))
+            json_file.write(json.dumps(dict_to_save, indent=4))
                 
 
     def save_rotation_center(self):
@@ -1593,7 +1613,7 @@ class App(QWidget):
                 self.fn_rc_tmp = fn
                 dict_to_save = self.fname_rc.copy()
                 with open(fn, 'w') as json_file:
-                    json_file.write(json.dumps(dict_to_save))
+                    json_file.write(json.dumps(dict_to_save, indent=4))
                 self.msg = f'saved to {fn}'
         except Exception as err:
             self.msg = str(err)
@@ -1620,6 +1640,7 @@ class App(QWidget):
                     file_dict[key] = dict_loaded[key]
                 self.msg = f'load rotation center from "{fn}"'
                 self.fname_rc.update(file_dict)
+                self.fname_rc = dict(sorted(self.fname_rc.items()))
                 self.update_list()
 
                 # update self.file_loaded
