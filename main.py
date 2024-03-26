@@ -1508,6 +1508,7 @@ class App(QWidget):
         sli = int(self.tx_sli_id.text())
         with h5py.File(fn, 'r') as hf:
             try:
+                ang = np.array(hf[attr_angle])  # in unit of degrees
                 '''
                 img_flat = np.array(hf[attr_flat])
                 if len(img_flat.shape) == 2:
@@ -1519,7 +1520,6 @@ class App(QWidget):
                     img_dark = np.expand_dims(img_dark, axis=0)
                 img_dark_avg = np.median(img_dark, axis=0)
 
-                ang = np.array(hf[attr_angle])  # in unit of degrees
                 if np.abs(ang[0]) < np.abs(ang[0] - 90):  # e.g, rotate from 0 - 180 deg
                     tmp = np.abs(ang - ang[0] - 180).argmin()
                 else:  # e.g.,rotate from -90 - 90 deg
@@ -1935,7 +1935,7 @@ class App(QWidget):
                     QApplication.processEvents()
                     rec, fsave, rc = self.recon_single_file_core(fn)
                     items[i].setText(tx)
-                    recon_flag = 'Y'
+                    recon_flag = f'Y: {fsave}'
                     self.update_fname_rc(fn_short, rc, recon_flag)
                     self.update_list()
                     self.save_rotation_center_tmp()
@@ -1966,8 +1966,10 @@ class App(QWidget):
             fn_short = fn_short.split(':')[0]
             recon_flag = self.fname_rc[fn_short]['recon_flag']
             if not recon_flag is None:
-                fn_recon = recon_flag.split(':')[-1].replace(' ', '')
+                fn_recon = recon_flag.split(':')[-1].strip(' ')
                 file_type = fn_recon.split('.')[-1]
+                print(file_type)
+                print(fn_recon)
                 if file_type == 'tiff' or file_type == 'tif':
                     self.img_rec_tomo = io.imread(fn_recon)
                 elif file_type == 'h5':
