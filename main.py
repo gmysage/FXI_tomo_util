@@ -1986,33 +1986,35 @@ class App(QWidget):
             fn_short = item[0].text()
             fn_short = fn_short.split(':')[0]
             recon_flag = self.fname_rc[fn_short]['recon_flag']
-            if not recon_flag is None:
-                fn_recon = recon_flag.split(':')[-1].strip(' ')
-                file_type = fn_recon.split('.')[-1]
-                print(file_type)
-                print(fn_recon)
-                if file_type == 'tiff' or file_type == 'tif':
-                    self.img_rec_tomo = io.imread(fn_recon)
-                elif file_type == 'h5':
-                    with h5py.File(fn_recon, 'r') as hf:
-                        self.img_rec_tomo = np.array(hf['img'])
-                else:
-                    self.msg = 'fail in loading image file'
-                    self.update_msg()
-                    return 0
-                if exist_napari and self.chkbox_napari.isChecked():
-                    napari.view_image(self.img_rec_tomo)
-                fn_recon_short = fn_recon.split('/')[-1]
-                sup_title = fn_recon_short
-                self.canvas1.sup_title = sup_title
-                if self.cb1.findText('3D tomo') < 0:
-                    self.cb1.addItem('3D tomo')
-                    self.cb1.setCurrentText('3D tomo')
-                self.update_canvas_img()
+            if not recon_flag is None:  # load reconstructed file
+                fn_recon = recon_flag.split(':')[-1].strip(' ')                
+            else:  # load any 3D file
+                file_root_path = self.lb_prj_path.text().strip(' ')
+                fn_recon = file_root_path + '/' + fn_short
 
-                self.msg = f'view {fn_recon_short}'
+            file_type = fn_recon.split('.')[-1]
+            print(file_type)
+            print(fn_recon)
+            if file_type == 'tiff' or file_type == 'tif':
+                self.img_rec_tomo = io.imread(fn_recon)
+            elif file_type == 'h5':
+                with h5py.File(fn_recon, 'r') as hf:
+                    self.img_rec_tomo = np.array(hf['img'])
             else:
                 self.msg = 'fail in loading image file'
+                self.update_msg()
+                return 0
+            if exist_napari and self.chkbox_napari.isChecked():
+                napari.view_image(self.img_rec_tomo)
+            fn_recon_short = fn_recon.split('/')[-1]
+            sup_title = fn_recon_short
+            self.canvas1.sup_title = sup_title
+            if self.cb1.findText('3D tomo') < 0:
+                self.cb1.addItem('3D tomo')
+                self.cb1.setCurrentText('3D tomo')
+            self.update_canvas_img()
+            self.msg = f'view {fn_recon_short}'                     
+
         except Exception as err:
             self.msg = str(err)
         finally:
