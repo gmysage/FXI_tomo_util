@@ -227,6 +227,17 @@ class App(QWidget):
         self.pb_clear_list.setFont(self.font2)
         self.pb_clear_list.clicked.connect(self.clear_file_list)
         '''
+        self.pb_h5_pre_set1 = QPushButton('preset: fly')
+        self.pb_h5_pre_set1.setFixedWidth(170)
+        self.pb_h5_pre_set1.setFont(self.font2)
+        self.pb_h5_pre_set1.clicked.connect(lambda:self.preset_h5('fly'))
+
+        self.pb_h5_pre_set2 = QPushButton('preset: zfly')
+        self.pb_h5_pre_set2.setFont(self.font2)
+        self.pb_h5_pre_set2.clicked.connect(lambda:self.preset_h5('zfly'))
+        self.pb_h5_pre_set2.setFixedWidth(170)
+
+
         lb_h5_prj = QLabel()
         lb_h5_prj.setText('Attr: proj:')
         #lb_h5_prj.setAlignment(QtCore.Qt.AlignRight | QtCore.Qt.AlignVCenter)
@@ -311,6 +322,12 @@ class App(QWidget):
         self.pb_rec_view_copy.clicked.connect(self.view_3D_recon)
         self.pb_rec_view_copy.setFixedWidth(170)
 
+        hbox_h5_preset = QHBoxLayout()
+        hbox_h5_preset.addWidget(self.pb_h5_pre_set1)
+        hbox_h5_preset.addWidget(self.pb_h5_pre_set2)
+        hbox_h5_preset.addStretch()
+        hbox_h5_preset.setAlignment(QtCore.Qt.AlignTop | QtCore.Qt.AlignLeft)
+
         hbox_rc_h51 = QHBoxLayout()
         hbox_rc_h51.addWidget(lb_h5_prj)
         hbox_rc_h51.addWidget(self.tx_h5_prj)
@@ -352,6 +369,7 @@ class App(QWidget):
 
         vbox = QVBoxLayout()
         vbox.addLayout(vbox_file)
+        vbox.addLayout(hbox_h5_preset)
         vbox.addLayout(hbox_rc_h51)
         vbox.addLayout(hbox_rc_h52)
         vbox.addLayout(hbox_rc_h53)
@@ -1653,6 +1671,31 @@ class App(QWidget):
         finally:
             self.update_msg()
             QApplication.processEvents()
+
+
+    def preset_h5(self, mode):
+        if mode == 'fly':
+            tx_proj = 'img_tomo'
+            tx_dark = 'img_dark'
+            tx_bkg = 'img_bkg'
+            tx_ang = 'angle'
+            tx_eng = 'X_eng'
+            tx_sid = 'scan_id'
+        if mode == 'zfly':
+            tx_proj = 'Exchange/data'
+            tx_dark = 'Exchange/dark'
+            tx_bkg = 'Exchange/flat'
+            tx_ang = 'Exchange/angle'
+            tx_eng = 'Experiment/X_eng (keV)'
+            tx_sid = 'Experiment/scan_id'
+        self.tx_h5_prj.setText(tx_proj)
+        self.tx_h5_dark.setText(tx_dark)
+        self.tx_h5_flat.setText(tx_bkg)
+        self.tx_h5_ang.setText(tx_ang)
+        self.tx_h5_xeng.setText(tx_eng)
+        self.tx_h5_sid.setText(tx_sid)
+        QApplication.processEvents()
+
 
     def view_projection_images(self):
         try:
