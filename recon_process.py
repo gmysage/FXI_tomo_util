@@ -339,6 +339,8 @@ def recon_and_save(fn,
                   attr_flat='img_bkg',
                   attr_dark='img_dark',
                   attr_angle='angle',
+                  attr_xeng, 
+                  attr_sid,
                   sli=[],
                   binning=None,
                   block_list=[],
@@ -377,8 +379,8 @@ def recon_and_save(fn,
         print("non valid slice id, will take reconstruction for the whole object")
     img_tomo = np.array(f[attr_proj][:, sli[0]:sli[1]])
 
-    xeng = np.array(f['X_eng']) if 'X_eng' in f else 0
-    scan_id = np.array(f['scan_id']) if 'scan_id' in f else 0
+    xeng = np.array(f[attr_xeng]) if attr_xeng in f else 0
+    scan_id = np.array(f[attr_sid]) if attr_sid in f else 0
     angle_list = np.array(f[attr_angle])
 
     img_dark = np.array(f[attr_dark][:, sli[0]:sli[1]])
