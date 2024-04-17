@@ -2024,6 +2024,7 @@ class App(QWidget):
                 self.set_single_selection()
                 return 0
             self.pb_rec_view.setEnabled(False)
+            self.pb_rec_view_copy.setEnabled(False)
             QApplication.processEvents()
             item = self.lst_prj_file.selectedItems()
             fn_short = item[0].text()
@@ -2063,6 +2064,7 @@ class App(QWidget):
         finally:
             self.update_msg()
             self.pb_rec_view.setEnabled(True)
+            self.pb_rec_view_copy.setEnabled(True)
             QApplication.processEvents()
 
     def enable_multi_selection(self):
