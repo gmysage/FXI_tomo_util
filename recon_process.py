@@ -330,7 +330,7 @@ def rotcen_test(fn,
                     # filter_name=filter_name
                 )
     img = tomopy.circ_mask(img, axis=0, ratio=circ_mask_ratio)
-    return img, cen, sli_start, sli_stop, sli_steps, sli_exp[0]
+    return img, cen, sli_start, sli_stop, sli_steps, sli
 
 
 def recon_and_save(fn,
