@@ -7,9 +7,15 @@ import os
 import json
 import tomopy
 from multiprocessing import cpu_count
+
 from PySide2 import QtGui, QtCore
 from PySide2.QtWidgets import *
 from PySide2.QtGui import QIntValidator, QDoubleValidator, QFont, QColor
+'''
+from PyQt5 import QtGui, QtCore
+from PyQt5.QtWidgets import *
+from PyQt5.QtGui import QIntValidator, QDoubleValidator, QFont, QColor
+'''
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
 import matplotlib as mpl
@@ -1800,6 +1806,7 @@ class App(QWidget):
         attr_dark = self.tx_h5_dark.text()
         attr_angle = self.tx_h5_ang.text()
         attr_xeng = self.tx_h5_xeng.text()
+        attr_sid = self.tx_h5_sid.text()
         block_list = self._get_block_list()
         auto_block_list = self._get_block_list_auto()
         denoise_flag = int(self.tx_rc_denoise.text())
@@ -1827,7 +1834,7 @@ class App(QWidget):
             self.update_msg(); QApplication.processEvents()
         ml_param = self.ml_get_param()
         rec, fsave = recon_and_save(fn, rc,
-                       attr_proj, attr_flat, attr_dark, attr_angle,
+                       attr_proj, attr_flat, attr_dark, attr_angle, attr_xeng, attr_sid,
                        sli, binning, block_list, dark_scale,
                        denoise_flag, snr, fw_level,
                        algorithm=algorithm,
