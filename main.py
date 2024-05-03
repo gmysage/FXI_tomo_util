@@ -6,16 +6,11 @@ import numpy as np
 import os
 import json
 import tomopy
-from multiprocessing import cpu_count
 
-from PySide2 import QtGui, QtCore
-from PySide2.QtWidgets import *
-from PySide2.QtGui import QIntValidator, QDoubleValidator, QFont, QColor
-'''
 from PyQt5 import QtGui, QtCore
 from PyQt5.QtWidgets import *
 from PyQt5.QtGui import QIntValidator, QDoubleValidator, QFont, QColor
-'''
+
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
 import matplotlib as mpl
@@ -1208,9 +1203,11 @@ class App(QWidget):
             item = self.lst_prj_file.item(i)
             fn_short = item.text().split(':')[0]
             if self.fname_rc[fn_short]['rc'] > 0:
-                self.lst_prj_file.setItemSelected(item, True)
+                #self.lst_prj_file.setItemSelected(item, True)
+                item.setSelected(True)
             else:
-                self.lst_prj_file.setItemSelected(item, False)
+                #self.lst_prj_file.setItemSelected(item, False)
+                item.setSelected(False)
 
 
     def filter_finished_recon(self):
@@ -1220,9 +1217,11 @@ class App(QWidget):
             fn_short = item.text().split(':')[0]
             recon_flag = self.fname_rc[fn_short]['recon_flag']
             if not recon_flag is None:
-                self.lst_prj_file.setItemSelected(item, True)
+                #self.lst_prj_file.setItemSelected(item, True)
+                item.setSelected(True)
             else:
-                self.lst_prj_file.setItemSelected(item, False)
+                #self.lst_prj_file.setItemSelected(item, False)
+                item.setSelected(False)
 
     def filter_reverse_selection(self):
         n_list = self.lst_prj_file.count()
@@ -1238,9 +1237,11 @@ class App(QWidget):
         for i in range(n_list):
             item = self.lst_prj_file.item(i)
             if i in item_sel_idx:
-                self.lst_prj_file.setItemSelected(item, False)
+                #self.lst_prj_file.setItemSelected(item, False)
+                item.setSelected(False)
             else:
-                self.lst_prj_file.setItemSelected(item, True)
+                #self.lst_prj_file.setItemSelected(item, True)
+                item.setSelected(True)
 
     def update_list(self):
         n_file = len(self.fname_rc)
@@ -1553,7 +1554,7 @@ class App(QWidget):
                 ang = np.array(hf[attr_angle])  # in unit of degrees
                 img0 = np.array(list(hf[attr_proj][0]))
                 s = img0.shape
-                '''
+
                 img_flat = np.array(hf[attr_flat])
                 if len(img_flat.shape) == 2:
                     img_flat = np.expand_dims(img_flat, axis=0)
@@ -1584,8 +1585,8 @@ class App(QWidget):
                 cshft = -tmat[0, 2]
                 
                 rot_cen = s[1] / 2 + cshft / 2 - 1
-                '''
-                rot_cen = find_cen(fn)
+
+                #rot_cen = find_cen(fn)
                 if sli == 0:
                     sli = s[1]//2
                 sino_prj = np.array(list(hf[attr_proj][:, sli:sli+1]))

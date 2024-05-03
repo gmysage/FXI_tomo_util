@@ -252,6 +252,7 @@ def rotcen_test(fn,
     f.close()
 
     prj_norm = (img_tomo - img_dark / dark_scale) / (img_bkg - img_dark / dark_scale)
+    prj_norm[np.isnan(prj_norm)] = 0
     prj_norm = ml_denoise(prj_norm, ml_param)
 
     n_angle = len(theta)
