@@ -153,10 +153,10 @@ class App(QWidget):
         lb_ld.setText('File root folder:')
         lb_ld.setFixedWidth(100)
 
-        self.lb_prj_path = QLabel()
-        self.lb_prj_path.setFixedWidth(450)
-        self.lb_prj_path.setFont(self.font2)
-        self.lb_prj_path.setStyleSheet('background: rgb(240, 240, 220);')
+        self.tx_prj_path = QLineEdit()
+        self.tx_prj_path.setFixedWidth(450)
+        self.tx_prj_path.setFont(self.font2)
+        self.tx_prj_path.setStyleSheet('background: rgb(240, 240, 220);')
 
         self.pb_open_prj = QPushButton('Open (.h5)')
         self.pb_open_prj.setFixedWidth(110)
@@ -195,7 +195,7 @@ class App(QWidget):
 
         hbox_load = QHBoxLayout()
         hbox_load.addWidget(lb_ld)
-        hbox_load.addWidget(self.lb_prj_path)
+        hbox_load.addWidget(self.tx_prj_path)
         hbox_load.addWidget(lb_prefix)
         hbox_load.addWidget(self.tx_prefix)
         hbox_load.addWidget(self.pb_open_prj)
@@ -1144,7 +1144,7 @@ class App(QWidget):
             file_type = '.' + fn_tmp[-1].split('.')[-1]
             file_loaded = retrieve_file_type(file_root_path, file_prefix, file_type)
             num = len(file_loaded)
-            self.lb_prj_path.setText('   ' + file_root_path)
+            self.tx_prj_path.setText(file_root_path)
             for i in range(num):
                 full_path = file_loaded[i]
                 fn_short = full_path.split('/')[-1]
@@ -1158,10 +1158,10 @@ class App(QWidget):
         file_dict = {}
         file_prefix = self.tx_prefix.text()
         file_type = '.h5'
-        file_root_path = self.lb_prj_path.text().replace(' ', '')
+        file_root_path = self.tx_prj_path.text().replace(' ', '')
         file_loaded = retrieve_file_type(file_root_path, file_prefix, file_type)
         num = len(file_loaded)
-        self.lb_prj_path.setText('   ' + file_root_path)
+        self.tx_prj_path.setText(file_root_path)
         exist_files = self.fname_rc.keys()
         for i in range(num):
             full_path = file_loaded[i]
@@ -1610,7 +1610,7 @@ class App(QWidget):
         if len(self.fn_rc_tmp):
             fn = self.fn_rc_tmp
         else:
-            fpath_current = self.lb_prj_path.text().strip(' ')
+            fpath_current = self.tx_prj_path.text().strip(' ')
             fn = fpath_current + '/rc_tmp.json'
         try:
             if fn[-5:] != '.json':
@@ -1658,7 +1658,7 @@ class App(QWidget):
                 keys = list(dict_loaded.keys())
                 tx = dict_loaded[keys[0]]['full_path'].split('/')
                 root_path = '/'.join(t for t in tx[:-1])
-                self.lb_prj_path.setText('   ' + root_path)
+                self.tx_prj_path.setText(root_path)
                 file_dict = {}
                 for key in keys:
                     file_dict[key] = dict_loaded[key]
@@ -2040,7 +2040,7 @@ class App(QWidget):
             if not recon_flag is None:  # load reconstructed file
                 fn_recon = recon_flag.split(':')[-1].strip(' ')                
             else:  # load any 3D file
-                file_root_path = self.lb_prj_path.text().strip(' ')
+                file_root_path = self.tx_prj_path.text().strip(' ')
                 fn_recon = file_root_path + '/' + fn_short
 
             file_type = fn_recon.split('.')[-1]
