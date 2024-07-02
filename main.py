@@ -303,10 +303,15 @@ class App(QWidget):
         self.tx_h5_sid.setText('scan_id')
         self.tx_h5_sid.setFont(self.font2)
 
-        self.pb_rc_view_prj = QPushButton('View proj. image')
+        self.pb_rc_view_prj = QPushButton('View proj')
         self.pb_rc_view_prj.setFont(self.font2)
         self.pb_rc_view_prj.clicked.connect(self.view_projection_images)
-        self.pb_rc_view_prj.setFixedWidth(170)
+        self.pb_rc_view_prj.setFixedWidth(112)
+
+        self.pb_rc_view_prj_1st = QPushButton('1st proj')
+        self.pb_rc_view_prj_1st.setFont(self.font2)
+        self.pb_rc_view_prj_1st.clicked.connect(self.view_projection_images_1st)
+        self.pb_rc_view_prj_1st.setFixedWidth(112)
 
         self.pb_clear_list = QPushButton('Delete all')
         self.pb_clear_list.setFixedWidth(170)
@@ -318,10 +323,10 @@ class App(QWidget):
         self.pb_del_list_item.setFont(self.font2)
         self.pb_del_list_item.clicked.connect(self.del_list_item)
 
-        self.pb_rec_view_copy = QPushButton('View recon (if exist)')
+        self.pb_rec_view_copy = QPushButton('View recon')
         self.pb_rec_view_copy.setFont(self.font2)
         self.pb_rec_view_copy.clicked.connect(self.view_3D_recon)
-        self.pb_rec_view_copy.setFixedWidth(170)
+        self.pb_rec_view_copy.setFixedWidth(112)
 
         hbox_h5_preset = QHBoxLayout()
         hbox_h5_preset.addWidget(self.pb_h5_pre_set1)
@@ -355,6 +360,7 @@ class App(QWidget):
 
         hbox_pb_view = QHBoxLayout()
         hbox_pb_view.addWidget(self.pb_rc_view_prj)
+        hbox_pb_view.addWidget(self.pb_rc_view_prj_1st)
         hbox_pb_view.addWidget(self.pb_rec_view_copy)
         hbox_pb_view.setAlignment(QtCore.Qt.AlignTop | QtCore.Qt.AlignLeft)
 
@@ -494,7 +500,20 @@ class App(QWidget):
         self.cb_rc_algorithm.setFont(self.font2)
         self.cb_rc_algorithm.setFixedWidth(80)
         self.cb_rc_algorithm.addItem('gridrec')
-        self.cb_rc_algorithm.addItem('astra')
+        self.cb_rc_algorithm.addItem('astra_fbp')
+        self.cb_rc_algorithm.addItem('astra_sirt')
+    
+        lb_rc_algorithm_iter = QLabel()
+        lb_rc_algorithm_iter.setText('Iter:')
+        lb_rc_algorithm_iter.setFont(self.font2)
+        lb_rc_algorithm_iter.setFixedWidth(85)
+        lb_rc_algorithm_iter.setAlignment(QtCore.Qt.AlignRight | QtCore.Qt.AlignVCenter)
+
+        self.tx_rc_algorithm_iter = QLineEdit()
+        self.tx_rc_algorithm_iter.setText('100')
+        self.tx_rc_algorithm_iter.setFont(self.font2)
+        self.tx_rc_algorithm_iter.setFixedWidth(80)
+        self.tx_rc_algorithm_iter.setValidator(QIntValidator())
 
         lb_rc_rm_strip = QLabel()
         lb_rc_rm_strip.setText('ring remove:')
@@ -511,8 +530,8 @@ class App(QWidget):
         self.cb_rm_strip = QComboBox()
         self.cb_rm_strip.setFont(self.font2)
         self.cb_rm_strip.setFixedWidth(80)
-        self.cb_rm_strip.addItem('all-stripe')
         self.cb_rm_strip.addItem('wavelet')
+        self.cb_rm_strip.addItem('all-stripe')
         self.cb_rm_strip.currentIndexChanged.connect(self.ring_remove)
 
         lb_rc_snr = QLabel()
@@ -522,7 +541,7 @@ class App(QWidget):
         lb_rc_snr.setFixedWidth(85)
 
         self.tx_rc_ring_remove = QLineEdit()
-        self.tx_rc_ring_remove.setText('3')
+        self.tx_rc_ring_remove.setText('4')
         self.tx_rc_ring_remove.setFont(self.font2)
         self.tx_rc_ring_remove.setFixedWidth(80)
         self.tx_rc_ring_remove.setValidator(QDoubleValidator())
@@ -537,8 +556,6 @@ class App(QWidget):
         hbox2 = QHBoxLayout()
         hbox2.addWidget(lb_rc_dark_scale)
         hbox2.addWidget(self.tx_rc_dark_scale)
-        hbox2.addWidget(lb_rc_algorithm)
-        hbox2.addWidget(self.cb_rc_algorithm)
         hbox2.setAlignment(QtCore.Qt.AlignTop | QtCore.Qt.AlignLeft)
 
         hbox3 = QHBoxLayout()
@@ -548,10 +565,18 @@ class App(QWidget):
         hbox3.addWidget(self.tx_rc_ring_remove)
         hbox3.setAlignment(QtCore.Qt.AlignTop | QtCore.Qt.AlignLeft)
 
+        hbox4 = QHBoxLayout()
+        hbox4.addWidget(lb_rc_algorithm)
+        hbox4.addWidget(self.cb_rc_algorithm)
+        hbox4.addWidget(lb_rc_algorithm_iter)
+        hbox4.addWidget(self.tx_rc_algorithm_iter)
+        hbox4.setAlignment(QtCore.Qt.AlignTop | QtCore.Qt.AlignLeft)
+
         vbox = QVBoxLayout()
         vbox.addLayout(hbox1)
         vbox.addLayout(hbox2)
         vbox.addLayout(hbox3)
+        vbox.addLayout(hbox4)
         vbox.setAlignment(QtCore.Qt.AlignTop)
         return vbox
 
@@ -1298,10 +1323,31 @@ class App(QWidget):
                 fw_level = 0
                 snr = p
 
+            options = {}
+            algorithm = self.cb_rc_algorithm.currentText()
+            print(algorithm)
+            if algorithm != 'gridrec':               
+ 
+                if algorithm == 'astra_fbp':
+                    method = 'FBP_CUDA'
+                elif algorithm == 'astra_sirt':
+                    method = 'SIRT_CUDA'
+                num_iter = int(self.tx_rc_algorithm_iter.text())
+                extra_options = {'MinConstraint': 0}                     
+                options = {
+                            'proj_type': 'cuda',
+                            'method': method,
+                            'num_iter': num_iter,
+                            'extra_options': extra_options
+                          }
+                    
+
 
             self.img_rc, self.rc, start, stop, steps, sli = rotcen_test(fn, attr_proj,
                                    attr_flat, attr_dark, attr_angle, start, stop, steps,
-                                   sli, block_list, denoise_flag, dark_scale=dark_scale,
+                                   sli, block_list, denoise_flag, 
+                                   algorithm=algorithm, options=options,
+                                   dark_scale=dark_scale,
                                    snr=snr, fw_level=fw_level, ml_param={},
                                    auto_block_list=auto_block_list)
             self.tx_rc_start.setText(str(start))
@@ -1495,7 +1541,8 @@ class App(QWidget):
                     rc, recon_flag = self.check_fname_rc_states(fn_short)
                     if rc: # exist
                         continue
-                rc, sino_norm, theta, sli = self.auto_rotation_center(fn)
+                #rc, sino_norm, theta, sli = self.auto_rotation_center(fn)
+                rc = self.auto_rotation_center(fn)
                 if fn_short in self.fname_rc.keys():
                     self.update_fname_rc(fn_short, rc, None)
                 self.fname_rc_batch[fn_short] = {'rc': rc}
@@ -1504,7 +1551,7 @@ class App(QWidget):
                 self.update_fname_rc(fn_short, rc, None)
                 self.update_list()
                 QApplication.processEvents()
-
+                '''
                 rec = tomopy.recon(sino_norm, theta, rc, algorithm='gridrec')
                 rec = tomopy.circ_mask(rec, axis=0, ratio=0.9)[0]
                 self.tx_sli_id.setText(str(sli))
@@ -1531,6 +1578,7 @@ class App(QWidget):
                 self.msg = 'auto center search finished '
             else:
                 self.msg = 'No file processed'
+            '''
         except Exception as err:
             self.msg = str(err)
         finally:
@@ -1586,9 +1634,12 @@ class App(QWidget):
                 
                 rot_cen = s[1] / 2 + cshft / 2 - 1
 
+
                 #rot_cen = find_cen(fn)
                 if sli == 0:
                     sli = s[1]//2
+
+                '''
                 sino_prj = np.array(list(hf[attr_proj][:, sli:sli+1]))
                 sino_flat = np.array(hf[attr_flat][:, sli:sli+1])
                 sino_flat = np.median(sino_flat, axis=0, keepdims=True)
@@ -1597,14 +1648,25 @@ class App(QWidget):
                 sino_norm = (sino_prj - sino_dark) / (sino_flat - sino_dark)
                 sino_norm = -np.log(sino_norm)
                 sino_norm[np.isnan(sino_norm)] = 0
-                sino_norm = tomopy.prep.stripe.remove_all_stripe(sino_norm, snr=3)
+            
+                p = int(self.tx_rc_ring_remove.text())
+                if self.cb_rm_strip.currentText() == 'wavelet':
+                    fw_level = p
+                    sino_norm = tomopy.prep.stripe.remove_stripe_fw(sino_norm, level=fw_level)
+                else:
+                    snr = p
+                    sino_norm = tomopy.prep.stripe.remove_all_stripe(sino_norm, snr=snr)
+                
                 theta = ang / 180. * np.pi
+                '''
             except Exception as err:
                 rot_cen = 0
                 sino = None
                 ang = None
                 self.msg = str(err)
-        return rot_cen, sino_norm, theta, sli
+        
+        #return rot_cen, sino_norm, theta, sli
+        return rot_cen
 
 
     def save_rotation_center_tmp(self):
@@ -1745,6 +1807,39 @@ class App(QWidget):
             self.pb_rc_view_prj.setText('View proj.')
             self.update_msg()
 
+    def view_projection_images_1st(self):
+        try:
+            self.pb_rc_view_prj_1st.setEnabled(False)
+            QApplication.processEvents()
+            item = self.lst_prj_file.selectedItems()
+            fn_short = item[0].text()
+            fn_short = fn_short.split(':')[0]
+            fn = self.fname_rc[fn_short]['full_path']
+            attr_proj = self.tx_h5_prj.text()
+            attr_flat = self.tx_h5_flat.text()
+            attr_dark = self.tx_h5_dark.text()
+            with h5py.File(fn, 'r') as hf:
+                img_prj = np.array(hf[attr_proj][0])
+                img_flat = np.median(np.array(hf[attr_flat]), axis=0)
+                img_dark = np.median(np.array(hf[attr_dark]), axis=0)
+            img_norm = (img_prj - img_dark) / (img_flat - img_dark)
+            plt.figure(figsize=(18, 6))
+            plt.subplot(121)
+            plt.imshow(img_prj)
+            plt.colorbar()
+
+            plt.subplot(122)
+            plt.imshow(img_norm)
+            plt.colorbar()
+            plt.suptitle(f'{fn_short}\n{fn}')
+            plt.show()
+        except Exception as err:
+            print(err)
+            self.msg = str(err)
+            self.update_msg()
+        finally:
+            self.pb_rc_view_prj_1st.setEnabled(True)
+
     def load_proj_file(self, fn):
         attr_proj = self.tx_h5_prj.text()
         attr_flat = self.tx_h5_flat.text()
@@ -1814,6 +1909,20 @@ class App(QWidget):
         dark_scale = int(self.tx_rc_dark_scale.text())
         binning = int(self.tx_rec_bin.text())
         algorithm = self.cb_rc_algorithm.currentText()
+        options = {}
+        if algorithm != 'gridrec':               
+            if algorithm == 'astra_fbp':
+                method = 'FBP_CUDA'
+            elif algorithm == 'astra_sirt':
+                method = 'SIRT_CUDA'
+            num_iter = int(self.tx_rc_algorithm_iter.text())
+            extra_options = {'MinConstraint': 0}                     
+            options = {
+                        'proj_type': 'cuda',
+                        'method': method,
+                        'num_iter': num_iter,
+                        'extra_options': extra_options
+                      }
 
         p = int(self.tx_rc_ring_remove.text())
         if self.cb_rm_strip.currentText() == 'wavelet':
@@ -1839,6 +1948,7 @@ class App(QWidget):
                        sli, binning, block_list, dark_scale,
                        denoise_flag, snr, fw_level,
                        algorithm=algorithm,
+                       options = options,
                        circ_mask_ratio=0.95,
                        fsave_flag=fsave_flag,
                        fsave_root=fsave_root,
@@ -1881,6 +1991,7 @@ class App(QWidget):
                 rc, recon_flag = self.check_fname_rc_states(fn_short)
                 if rc == 0:
                     continue
+                
                 rec, _, _ = self.recon_single_file_slices(fn, sli, fsave_flag=False, fsave_root='.',
                                                      fsave_prefix='rec', return_flag=1)
                 rec = tomopy.circ_mask(rec, axis=0, ratio=0.9)
@@ -1907,6 +2018,8 @@ class App(QWidget):
                 self.update_canvas_img()
         except Exception as err:
             self.msg = str(err)
+            exc_type, exc_value, exc_traceback = sys.exc_info()
+            print(exc_traceback.tb_lineno)
         finally:
             self.update_msg()
             print(self.msg)
@@ -2097,7 +2210,7 @@ class App(QWidget):
         tx = self.cb_rm_strip.currentText()
         if tx == 'wavelet':
             self.lb_rm_ring.setText('fw level:')
-            self.tx_rc_ring_remove.setText('9')
+            self.tx_rc_ring_remove.setText('4')
         else:
             self.lb_rm_ring.setText('snr:')
             self.tx_rc_ring_remove.setText('3')

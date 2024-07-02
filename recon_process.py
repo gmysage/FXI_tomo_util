@@ -314,13 +314,23 @@ def rotcen_test(fn,
                     filter_name=filter_name
                 )
             elif 'astra' in algorithm:
-                img[i] = tomopy.recon(
-                    prj_norm[:, addition_slice // 2: addition_slice // 2 + 1],
-                    theta,
-                    center=cen[i],
-                    algorithm=tomopy.astra,
-                    options=options
-                )
+                try:
+                    img[i] = tomopy.recon(
+                        prj_norm[:, addition_slice // 2: addition_slice // 2 + 1],
+                        theta,
+                        center=cen[i],
+                        algorithm=tomopy.astra,
+                        options=options
+                    )
+                except:
+                    print(f'astra_cuda is not available, switch to gridrec')
+                    img[i] = tomopy.recon(
+                        prj_norm[:, addition_slice // 2: addition_slice // 2 + 1],
+                        theta,
+                        center=cen[i],
+                        algorithm="gridrec",
+                        filter_name=filter_name
+                    )
             else:
                 img[i] = tomopy.recon(
                     prj_norm[:, addition_slice // 2: addition_slice // 2 + 1],
@@ -350,6 +360,7 @@ def recon_and_save(fn,
                   snr=1,
                   fw_level=9,
                   algorithm='gridrec',
+                  options = {},
                   circ_mask_ratio=0.95,
                   fsave_flag = True,
                   fsave_root = '.',
@@ -397,7 +408,7 @@ def recon_and_save(fn,
     proj0[np.isnan(proj0)] = 0
     proj0[proj0<0] = 0
     rec = recon_img(proj0, angle_list, rot_cen, binning, block_list,
-                    denoise_flag, snr, fw_level, algorithm, circ_mask_ratio,
+                    denoise_flag, snr, fw_level, algorithm, options, circ_mask_ratio,
                     ml_param, auto_block_list)
     s1 = rec.shape # (400, 1280, 1280)
     if len(roi_cen) == 2 and len(roi_size) == 2:
@@ -432,7 +443,7 @@ def recon_and_save(fn,
 
 
 def recon_img(proj0, angle_list, rot_cen, binning=None, block_list=[], denoise_flag=0, snr=0,
-              fw_level=0, algorithm='gridrec', circ_mask_ratio=0.95, ml_param={}, auto_block_list={}):
+              fw_level=0, algorithm='gridrec', options={}, circ_mask_ratio=0.95, ml_param={}, auto_block_list={}):
     ts = time.time()
     tmp = proj0[0]
     s = [1, tmp.shape[0], tmp.shape[1]]
@@ -476,14 +487,15 @@ def recon_img(proj0, angle_list, rot_cen, binning=None, block_list=[], denoise_f
     '''
     ts1 = time.time()
 
-    print('reconstruction ...')
+    print(f'reconstruction using {algorithm}')
+    '''
     extra_options = {'MinConstraint': 0, }
     options = {'proj_type': 'cuda',
                'method': 'FBP_CUDA',
                'num_iter': 20,
                'extra_options': extra_options
                }
-
+    '''
     s = proj.shape  # e.g, (600, 1080, 1280)
     n_sli = 40
     n_step = s[1] // n_sli
@@ -501,12 +513,15 @@ def recon_img(proj0, angle_list, rot_cen, binning=None, block_list=[], denoise_f
             prj_sub = tomopy.prep.stripe.remove_stripe_fw(prj_sub, level=fw_level)
         prj_sub = denoise(prj_sub, denoise_flag)
         if 'astra' in algorithm:
-            rec_sub = tomopy.recon(prj_sub,
-                                     theta,
-                                     center=rot_cen,
-                                     algorithm=tomopy.astra,
-                                     options=options,
-                                     ncore=4)
+            try:
+                rec_sub = tomopy.recon(prj_sub,
+                                         theta,
+                                         center=rot_cen,
+                                         algorithm=tomopy.astra,
+                                         options=options,
+                                         ncore=4)
+            except:
+                rec_sub = tomopy.recon(prj_sub, theta, center=rot_cen, algorithm='gridrec')
         else:
             rec_sub = tomopy.recon(prj_sub, theta, center=rot_cen, algorithm='gridrec')
         recon[id_s:id_e] = rec_sub
