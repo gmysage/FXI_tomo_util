@@ -742,7 +742,20 @@ class App(QWidget):
         self.tx_rec_roi_s.setFixedWidth(80)
         self.tx_rec_roi_s.setText('[]')
         self.tx_rec_roi_s.setFont(self.font2)
+        
+        lb_rec_cir_mask_ratio = QLabel()
+        lb_rec_cir_mask_ratio.setText('circle mask ratio:')
+        lb_rec_cir_mask_ratio.setFixedWidth(125)
+        lb_rec_cir_mask_ratio.setFont(self.font2)
+        lb_rec_cir_mask_ratio.setAlignment(QtCore.Qt.AlignRight | QtCore.Qt.AlignVCenter)
 
+        self.tx_rec_cir_mask_ratio = QLineEdit()
+        self.tx_rec_cir_mask_ratio.setFixedWidth(80)
+        self.tx_rec_cir_mask_ratio.setValidator(QDoubleValidator())
+        self.tx_rec_cir_mask_ratio.setText('0.95')
+        self.tx_rec_cir_mask_ratio.setFont(self.font2)
+        
+        
         self.chkbox_auto_bl = QCheckBox('Auto block_list:')
         self.chkbox_auto_bl.setFont(self.font2)
         self.chkbox_auto_bl.setFixedWidth(120)
@@ -806,6 +819,8 @@ class App(QWidget):
         hbox_rec1.addWidget(self.tx_rec_sli)
         hbox_rec1.addWidget(lb_rec_bin)
         hbox_rec1.addWidget(self.tx_rec_bin)
+        hbox_rec1.addWidget(lb_rec_cir_mask_ratio)
+        hbox_rec1.addWidget(self.tx_rec_cir_mask_ratio)
         hbox_rec1.addStretch()
         hbox_rec1.setAlignment(QtCore.Qt.AlignTop | QtCore.Qt.AlignLeft)
 
@@ -1290,6 +1305,10 @@ class App(QWidget):
             auto_block_list = self._get_block_list_auto()
             denoise_flag = int(self.tx_rc_denoise.text())
             dark_scale = int(self.tx_rc_dark_scale.text())
+            
+            mask_r = float(self.tx_rec_cir_mask_ratio.text())
+            
+            
             p = int(self.tx_rc_ring_remove.text())
             if self.cb_rm_strip.currentText() == 'wavelet':
                 fw_level = p
@@ -1302,6 +1321,7 @@ class App(QWidget):
             self.img_rc, self.rc, start, stop, steps, sli = rotcen_test(fn, attr_proj,
                                    attr_flat, attr_dark, attr_angle, start, stop, steps,
                                    sli, block_list, denoise_flag, dark_scale=dark_scale,
+                                   circ_mask_ratio=mask_r,
                                    snr=snr, fw_level=fw_level, ml_param={},
                                    auto_block_list=auto_block_list)
             self.tx_rc_start.setText(str(start))
@@ -1827,6 +1847,9 @@ class App(QWidget):
         roi_c = extract_range(roi_c, 'int')
         roi_s = self.tx_rec_roi_s.text()
         roi_s = extract_range(roi_s, 'int')
+        mask_r = float(self.tx_rec_cir_mask_ratio.text())
+               
+        
         fn_short = fn.split('/')[-1]
         rc, recon_flag = self.check_fname_rc_states(fn_short)
         if rc == 0:
@@ -1839,7 +1862,7 @@ class App(QWidget):
                        sli, binning, block_list, dark_scale,
                        denoise_flag, snr, fw_level,
                        algorithm=algorithm,
-                       circ_mask_ratio=0.95,
+                       circ_mask_ratio=mask_r,
                        fsave_flag=fsave_flag,
                        fsave_root=fsave_root,
                        fsave_prefix=fsave_prefix,
