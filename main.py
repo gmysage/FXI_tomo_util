@@ -14,8 +14,8 @@ from PyQt5.QtGui import QIntValidator, QDoubleValidator, QFont, QColor
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
 import matplotlib as mpl
-#mpl.use('Qt5Agg')
-mpl.use('qtagg') # automaticall select Qt5Agg or PySide2
+mpl.use('Qt5Agg')
+#mpl.use('qtagg') # automaticall select Qt5Agg or PySide2
 from skimage import io
 from copy import deepcopy
 from mpl_toolkits.axes_grid1 import make_axes_locatable
@@ -2723,7 +2723,7 @@ class MyCanvas(FigureCanvas):
         self.current_color = 'red'
         self.special_info = None
         FigureCanvas.__init__(self, self.fig)
-        FigureCanvas.setSizePolicy(self, QSizePolicy.Expanding, QSizePolicy.Expanding)
+        #FigureCanvas.setSizePolicy(self, QSizePolicy.Expanding, QSizePolicy.Expanding)
         FigureCanvas.updateGeometry(self)
         self.setParent(parent)
         self.mpl_connect('motion_notify_event', self.mouse_moved)

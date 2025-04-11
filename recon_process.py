@@ -428,8 +428,9 @@ def recon_and_save(fn,
     if fsave_root[-1] == '/':
         fsave_root = fsave_root[:-1]
     fsave = f"{fsave_root}/recon_{fsave_prefix}{slice_info}{bin_info}.h5"
-
+    
     if fsave_flag:
+        ts1 = time.time()
         print('saving data ...')
         with h5py.File(fsave, "w") as hf:
             hf.create_dataset("img", data=rec)
@@ -437,7 +438,9 @@ def recon_and_save(fn,
             hf.create_dataset("binning", data=binning)
             hf.create_dataset("scan_id", data=scan_id)
             hf.create_dataset("X_eng", data=xeng)
+        ts2 = time.time()
         print(f'file saved to {fsave}')
+        print(f'time for saving data: {ts2-ts1:3.2f} sec')        
     if return_flag:
         return rec, fsave
 
@@ -475,6 +478,7 @@ def recon_img(proj0, angle_list, rot_cen, binning=None, block_list=[], denoise_f
     proj = -np.log(img_norm)
     proj[np.isnan(proj)] = 0
     proj[np.isinf(proj)] = 0
+    proj[proj<0] = 0
     '''
     if snr > 0:
         print('removing all stripe ...')
