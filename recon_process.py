@@ -15,6 +15,13 @@ except:
     exist_pyxas = False
     
 
+try:
+    import algotom.prep.removal as algotom_prep_removal
+    import algotom.rec.reconstruction as algotom_rec
+    algotom_exist = True
+except:
+    algotom_exist = False
+    print('algotom not found')    
 
 
 def find_cen(fn):
@@ -292,7 +299,13 @@ def rotcen_test(fn,
         theta = theta[allow_list]
     '''
     if snr > 0:
-        prj_norm = tomopy.prep.stripe.remove_all_stripe(prj_norm, snr=snr)
+        if algotom_exist:
+            prj_norm = algotom_remove_all_strip(prj_norm, snr=snr, la_size=51, sm_size=21, drop_ratio=0.1)                           
+            print('remove all_stripe using algotom')
+        else:       
+            prj_norm = tomopy.prep.stripe.remove_all_stripe(prj_norm, snr=snr)
+            print('remove all_strip using tomopy')
+        
     if fw_level > 0:
         prj_norm = tomopy.prep.stripe.remove_stripe_fw(prj_norm, level=fw_level)
 
@@ -306,13 +319,23 @@ def rotcen_test(fn,
         if 1:
             print("{}: rotcen {}".format(i + 1, cen[i]))
             if algorithm == 'gridrec':
-                img[i] = tomopy.recon(
-                    prj_norm[:, addition_slice // 2: addition_slice // 2 + 1],
-                    theta,
-                    center=cen[i],
-                    algorithm="gridrec",
-                    filter_name=filter_name
-                )
+                if algotom_exist:
+                    t = algotom_rec.gridrec_reconstruction(
+                        prj_norm[:, addition_slice // 2: addition_slice // 2 + 1],
+                        cen[i],
+                        theta,
+                        filter_name=filter_name,
+                        apply_log=False
+                    )
+                    img[i] = np.squeeze(t)
+                else:
+                    img[i] = tomopy.recon(
+                        prj_norm[:, addition_slice // 2: addition_slice // 2 + 1],
+                        theta,
+                        center=cen[i],
+                        algorithm="gridrec",
+                        filter_name=filter_name
+                    )
             elif 'astra' in algorithm:
                 try:
                     img[i] = tomopy.recon(
@@ -428,8 +451,9 @@ def recon_and_save(fn,
     if fsave_root[-1] == '/':
         fsave_root = fsave_root[:-1]
     fsave = f"{fsave_root}/recon_{fsave_prefix}{slice_info}{bin_info}.h5"
-
+    
     if fsave_flag:
+        ts1 = time.time()
         print('saving data ...')
         with h5py.File(fsave, "w") as hf:
             hf.create_dataset("img", data=rec)
@@ -437,7 +461,9 @@ def recon_and_save(fn,
             hf.create_dataset("binning", data=binning)
             hf.create_dataset("scan_id", data=scan_id)
             hf.create_dataset("X_eng", data=xeng)
+        ts2 = time.time()
         print(f'file saved to {fsave}')
+        print(f'time for saving data: {ts2-ts1:3.2f} sec')        
     if return_flag:
         return rec, fsave
 
@@ -475,6 +501,7 @@ def recon_img(proj0, angle_list, rot_cen, binning=None, block_list=[], denoise_f
     proj = -np.log(img_norm)
     proj[np.isnan(proj)] = 0
     proj[np.isinf(proj)] = 0
+    proj[proj<0] = 0
     '''
     if snr > 0:
         print('removing all stripe ...')
@@ -508,7 +535,11 @@ def recon_img(proj0, angle_list, rot_cen, binning=None, block_list=[], denoise_f
             break
         prj_sub = proj[:, id_s: id_e]
         if snr > 0:
-            prj_sub = tomopy.prep.stripe.remove_all_stripe(prj_sub, snr=snr)
+            if algotom_exist:
+                print('remove all_stripe using algotom')  
+                prj_sub = algotom_remove_all_strip(prj_sub, snr=snr, la_size=51, sm_size=21, drop_ratio=0.1)                           
+            else:
+                prj_sub = tomopy.prep.stripe.remove_all_stripe(prj_sub, snr=snr)
         if fw_level > 0:
             prj_sub = tomopy.prep.stripe.remove_stripe_fw(prj_sub, level=fw_level)
         prj_sub = denoise(prj_sub, denoise_flag)
@@ -521,9 +552,13 @@ def recon_img(proj0, angle_list, rot_cen, binning=None, block_list=[], denoise_f
                                          options=options,
                                          ncore=4)
             except:
-                rec_sub = tomopy.recon(prj_sub, theta, center=rot_cen, algorithm='gridrec')
+                rec_sub = tomopy.recon(prj_sub, theta, center=rot_cen, algorithm='gridrec')                
         else:
-            rec_sub = tomopy.recon(prj_sub, theta, center=rot_cen, algorithm='gridrec')
+            if algotom_exist:
+                rec_sub = algotom_rec.gridrec_reconstruction(prj_sub, rot_cen, theta, ratio=None, apply_log=False)
+                rec_sub = np.swapaxes(rec_sub, 0, 1)
+            else:
+                rec_sub = tomopy.recon(prj_sub, theta, center=rot_cen, algorithm='gridrec')
         recon[id_s:id_e] = rec_sub
     ts2 = time.time()
     del img_norm, proj
@@ -531,6 +566,18 @@ def recon_img(proj0, angle_list, rot_cen, binning=None, block_list=[], denoise_f
     print(f'time for loading data:   {ts1 - ts:3.2f} sec')
     print(f'time for reconstruction: {ts2 - ts1:3.2f} sec')
     return recon
+
+
+def algotom_remove_all_strip(prj, snr, la_size=51, sm_size=21, drop_ratio=0.1):
+    s = prj.shape
+
+    if len(s) == 2:
+        prj_r = algotom_prep_removal.remove_all_stripe(prj, snr=snr, la_size=la_size, sm_size=sm_size, drop_ratio=drop_ratio)    
+    else:
+        prj_r = np.zeros(s)
+        for i in range(s[1]):
+            prj_r[:, i] = algotom_prep_removal.remove_all_stripe(prj[:, i], snr=snr, la_size=la_size, sm_size=sm_size, drop_ratio=drop_ratio)    
+    return prj_r
 
 def denoise(prj, denoise_flag):
     if denoise_flag == 1:  # Wiener denoise
