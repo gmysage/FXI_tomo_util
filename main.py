@@ -1048,7 +1048,7 @@ class App(QWidget):
             self.cb_ml_device_rec.addItem('cuda')
         else:
             for i in range(self.gpu_count):
-                self.cb_ml_device.addItem(f'cuda:{i:d}')
+                self.cb_ml_device_rec.addItem(f'cuda:{i:d}')
 
         hbox = QHBoxLayout()
         hbox.addWidget(lb_ml_model_rec)
