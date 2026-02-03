@@ -3,9 +3,7 @@ import h5py
 
 import matplotlib.pyplot as plt
 import numpy as np
-import os
 import json
-import tomopy
 
 from PyQt5 import QtGui, QtCore
 from PyQt5.QtWidgets import *
@@ -136,9 +134,12 @@ class App(QWidget):
         self.current_file_short = ''
         self.enable_multi_selection()
         self.ml_model_path = f'{self.fpath}/pre_traind_model_xanes_denoise.pth'
+        self.ml_model_recon_path = f'{self.fpath}/model_tomo_best_psnr.pth'
         self.ml_model_path_default = self.ml_model_path
+        self.ml_model_recon_path_default = self.ml_model_recon_path
         if exist_pyxas:
             self.tx_ml_model.setText(self.ml_model_path_default)
+            self.tx_ml_model_rec.setText(self.ml_model_recon_path_default)
 
     def layout_GP_prepare(self):
         lb_empty = QLabel()
@@ -822,8 +823,11 @@ class App(QWidget):
         self.pb_rec_view.setFont(self.font2)
         self.pb_rec_view.clicked.connect(self.view_3D_recon)
 
+
         if exist_pyxas:
             vbox_ml = self.layout_ml()
+            vbox_ml_rec = self.layout_ml_recon()
+
 
         vbox_link = QVBoxLayout()
         vbox_link.addWidget(lb_link)
@@ -884,8 +888,9 @@ class App(QWidget):
         if exist_pyxas:
             vbox_rec.addLayout(vbox_ml)
         vbox_rec.addLayout(vbox_rec_view)
+        if exist_pyxas:
+            vbox_rec.addLayout(vbox_ml_rec)
         #vbox_rec.addWidget(self.terminal)
-
         vbox_rec.addWidget(lb_empty)
         vbox_rec.addStretch()
         vbox_rec.setAlignment(QtCore.Qt.AlignLeft | QtCore.Qt.AlignTop)
@@ -960,8 +965,6 @@ class App(QWidget):
             for i in range(self.gpu_count):
                 self.cb_ml_device.addItem(f'cuda:{i:d}')
 
-
-
         hbox = QHBoxLayout()
         hbox.addWidget(lb_ml_model)
         hbox.addWidget(self.tx_ml_model)
@@ -996,6 +999,80 @@ class App(QWidget):
         vbox.setAlignment(QtCore.Qt.AlignLeft | QtCore.Qt.AlignTop)
         return vbox
 
+
+    def layout_ml_recon(self):
+        lb_empty = QLabel()
+        lb_empty1 = QLabel()
+
+        lb_title = QLabel()
+        lb_title.setText('ML denoise on recon3D')
+        lb_title.setFont(self.font1)
+        lb_title.setFixedWidth(200)
+
+        lb_ml_model_rec = QLabel()
+        lb_ml_model_rec.setText('ML model path:')
+        lb_ml_model_rec.setFont(self.font2)
+        lb_ml_model_rec.setFixedWidth(105)
+
+        self.pb_ml_model_rec = QPushButton('load model')
+        self.pb_ml_model_rec.setFixedWidth(105)
+        self.pb_ml_model_rec.setFont(self.font2)
+        self.pb_ml_model_rec.clicked.connect(self.ml_load_model_rec)
+
+        self.tx_ml_model_rec = QLineEdit()
+        self.tx_ml_model_rec.setFixedWidth(400)
+        self.tx_ml_model_rec.setText('')
+        self.tx_ml_model_rec.setFont(self.font2)
+
+        self.pb_rec_ml_enoise = QPushButton('ML denoise on recon')
+        self.pb_rec_ml_enoise.setFixedWidth(170)
+        self.pb_rec_ml_enoise.setFont(self.font2)
+        self.pb_rec_ml_enoise.clicked.connect(self.ml_3D_denosie_recon)
+
+        self.lb_ml_model_rec_msg = QLabel()
+        #self.lb_ml_model_rec_msg.setFixedWidth(200)
+        self.lb_ml_model_rec_msg.setStyleSheet('color: rgb(250, 50, 50);')
+
+        lb_ml_device_rec = QLabel()
+        lb_ml_device_rec.setText('Device:')
+        lb_ml_device_rec.setFont(self.font2)
+        lb_ml_device_rec.setAlignment(QtCore.Qt.AlignRight | QtCore.Qt.AlignVCenter)
+        lb_ml_device_rec.setFixedWidth(80)
+
+        self.cb_ml_device_rec = QComboBox()
+        self.cb_ml_device_rec.setFont(self.font2)
+        self.cb_ml_device_rec.setFixedWidth(85)
+        if self.gpu_count == 0:
+            self.cb_ml_device_rec.addItem('cpu')
+        elif self.gpu_count == 1:
+            self.cb_ml_device_rec.addItem('cuda')
+        else:
+            for i in range(self.gpu_count):
+                self.cb_ml_device.addItem(f'cuda:{i:d}')
+
+        hbox = QHBoxLayout()
+        hbox.addWidget(lb_ml_model_rec)
+        hbox.addWidget(self.tx_ml_model_rec)
+        hbox.addWidget(self.pb_ml_model_rec)
+        hbox.setAlignment(QtCore.Qt.AlignLeft)
+
+        hbox_ml = QHBoxLayout()
+        hbox_ml.addWidget(self.pb_rec_ml_enoise)
+        hbox_ml.addWidget(lb_ml_device_rec)
+        hbox_ml.addWidget(self.cb_ml_device_rec)
+        hbox_ml.addWidget(lb_empty1)
+        hbox_ml.setAlignment(QtCore.Qt.AlignLeft | QtCore.Qt.AlignTop)
+
+        vbox = QVBoxLayout()
+        vbox.addWidget(lb_title)
+        #vbox.addWidget(self.chkbox_ml)
+        vbox.addLayout(hbox)
+        vbox.addLayout(hbox_ml)
+        vbox.addWidget(self.lb_ml_model_rec_msg)
+        vbox.addWidget(lb_empty1)
+        #vbox.addWidget(self.pb_ml_model_test)
+        vbox.setAlignment(QtCore.Qt.AlignLeft | QtCore.Qt.AlignTop)
+        return vbox
 
     def layout_recon_and_canvas(self):
         vbox_canvas = self.layout_canvas()
@@ -1088,6 +1165,23 @@ class App(QWidget):
             fn, _ = QFileDialog.getOpenFileName(pytomo, "QFileDialog.getOpenFileName()", "", file_type, options=options)
             if fn:
                 self.ml_model_path = fn
+                self.tx_ml_model.setText(fn)
+            else:
+                self_ml_model_path = ''
+            QApplication.processEvents()
+        except Exception as err:
+            self.msg = str(err)
+            self.update_msg()
+
+    def ml_load_model_rec(self):
+        options = QFileDialog.Option()
+        options |= QFileDialog.DontUseNativeDialog
+        try:
+            file_type = 'pth files (*.pth)'
+            fn, _ = QFileDialog.getOpenFileName(pytomo, "QFileDialog.getOpenFileName()", "", file_type, options=options)
+            if fn:
+                self.ml_model_recon_path = fn
+                self.tx_ml_model_rec.setText(fn)
             else:
                 self_ml_model_path = ''
             QApplication.processEvents()
@@ -1423,9 +1517,6 @@ class App(QWidget):
             self.pb_rc_find.setStyleSheet('color: rgb(50, 50, 250);')
             self.update_msg()
             QApplication.processEvents()
-
-
-
 
     def _get_block_list(self):
         tx = self.tx_rc_block_list.text()
@@ -2210,6 +2301,51 @@ class App(QWidget):
             self.pb_rec_view_copy.setEnabled(True)
             QApplication.processEvents()
 
+    def ml_3D_denosie_recon(self):
+        try:
+            self.pb_rec_ml_enoise.setEnabled(False)
+            self.pb_rec_ml_enoise.setText('wait ...')
+            self.lb_ml_model_rec_msg.setText('')
+            QApplication.processEvents()
+
+            device = self.cb_ml_device_rec.currentText()
+            model_path = self.tx_ml_model_rec.text()
+
+            item = self.lst_prj_file.selectedItems()
+            fn_short = item[0].text()
+            fn_short = fn_short.split(':')[0]
+            fn_recon = self.fname_rc[fn_short]['full_path']
+            file_type = fn_recon.split('.')[-1]
+            if file_type == 'tiff' or file_type == 'tif':
+                self.img_rec_tomo = io.imread(fn_recon)
+            elif file_type == 'h5':
+                with h5py.File(fn_recon, 'r') as hf:
+                    self.img_rec_tomo = np.array(hf['img'])
+            img3D = self.img_rec_tomo
+            img_d, img_comb = apply_ML_tomo(img3D, model_path, device)
+            self.img_rec_tomo_denoise = img_d.copy()
+            sup_title = fn_short
+            self.canvas1.sup_title = sup_title
+            if self.cb1.findText('3D tomo denoised') < 0:
+                self.cb1.addItem('3D tomo denoised')
+                self.cb1.setCurrentText('3D tomo denoised')
+            self.update_canvas_img()
+
+            self.pb_rec_ml_enoise.setEnabled(True)
+            self.pb_rec_ml_enoise.setText('ML denoise on recon')
+            self.lb_ml_model_rec_msg.setText('"3D tomo denoised" has been added for plot ')
+            QApplication.processEvents()
+            try:
+                self.slider = pyxas.plot3D(img_comb)
+            except Exception as err:
+                print(err)
+        except Exception as err:
+            print(err)
+            self.lb_ml_model_rec_msg.setText(str(err))
+        finally:
+            self.pb_rec_ml_enoise.setEnabled(True)
+            QApplication.processEvents()
+
     def enable_multi_selection(self):
         if  self.chkbox_multi_selec.isChecked():
             self.lst_prj_file.setSelectionMode(QAbstractItemView.MultiSelection)
@@ -2658,6 +2794,20 @@ class App(QWidget):
                 canvas.update_img_stack()
                 slide.setMaximum(max(sh[0] - 1, 0))
                 self.current_image = self.img_rec_tomo[canvas.current_img_index]
+                self.auto_contrast(canvas)
+            if type_index == '3D tomo denoised':
+                self.img_colormix_raw = np.array([])
+                canvas.rgb_flag = 0
+                canvas.x, canvas.y = [], []
+                canvas.axes.clear()  # this is important, to clear the current image before another imshow()
+                sh = self.img_rec_tomo_denoise.shape
+                canvas.img_stack = self.img_rec_tomo_denoise
+                canvas.special_info = None
+                canvas.current_img_index = sh[0]//2
+                canvas.title = [f'{i}:' for i in range(sh[0])]
+                canvas.update_img_stack()
+                slide.setMaximum(max(sh[0] - 1, 0))
+                self.current_image = self.img_rec_tomo_denoise[canvas.current_img_index]
                 self.auto_contrast(canvas)
 
             if type_index == 'proj vs. proj_ml (raw)':
