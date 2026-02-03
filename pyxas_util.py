@@ -49,7 +49,3 @@ def masked_bkg_avg(img):
     bkg_avg = np.sum(bkg) / np.sum(mask)
     return bkg_avg
 
-def load_default_recon_model(device='cuda'):
-    model_prod = pyxas.RRDBNet(1, 1, 16, 4, 32).to(device)
-
-    fn_model_root = spec.submodule_search_locations[0] # e.g. '/data/FL_correction/FL'

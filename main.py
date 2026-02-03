@@ -2324,11 +2324,14 @@ class App(QWidget):
             img3D = self.img_rec_tomo
             img_d, img_comb = apply_ML_tomo(img3D, model_path, device)
             self.img_rec_tomo_denoise = img_d.copy()
+            self.img_rec_tomo_denoise_compare = img_comb.copy()
             sup_title = fn_short
             self.canvas1.sup_title = sup_title
             if self.cb1.findText('3D tomo denoised') < 0:
                 self.cb1.addItem('3D tomo denoised')
                 self.cb1.setCurrentText('3D tomo denoised')
+            if self.cb1.findText('3D tomo denoise compare') < 0:
+                self.cb1.addItem('3D tomo denoise compare')
             self.update_canvas_img()
 
             self.pb_rec_ml_enoise.setEnabled(True)
@@ -2808,6 +2811,20 @@ class App(QWidget):
                 canvas.update_img_stack()
                 slide.setMaximum(max(sh[0] - 1, 0))
                 self.current_image = self.img_rec_tomo_denoise[canvas.current_img_index]
+                self.auto_contrast(canvas)
+            if type_index == '3D tomo denoise compare':
+                self.img_colormix_raw = np.array([])
+                canvas.rgb_flag = 0
+                canvas.x, canvas.y = [], []
+                canvas.axes.clear()  # this is important, to clear the current image before another imshow()
+                sh = self.img_rec_tomo_denoise_compare.shape
+                canvas.img_stack = self.img_rec_tomo_denoise_compare
+                canvas.special_info = None
+                canvas.current_img_index = sh[0]//2
+                canvas.title = [f'{i}:' for i in range(sh[0])]
+                canvas.update_img_stack()
+                slide.setMaximum(max(sh[0] - 1, 0))
+                self.current_image = self.img_rec_tomo_denoise_compare[canvas.current_img_index]
                 self.auto_contrast(canvas)
 
             if type_index == 'proj vs. proj_ml (raw)':
