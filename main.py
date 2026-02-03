@@ -133,6 +133,7 @@ class App(QWidget):
         self.current_file = ''
         self.current_file_short = ''
         self.enable_multi_selection()
+        self.slider = []
         self.ml_model_path = f'{self.fpath}/pre_traind_model_xanes_denoise.pth'
         self.ml_model_recon_path = f'{self.fpath}/model_tomo_best_psnr.pth'
         self.ml_model_path_default = self.ml_model_path
@@ -2339,7 +2340,8 @@ class App(QWidget):
             self.lb_ml_model_rec_msg.setText('"3D tomo denoised" has been added for plot ')
             QApplication.processEvents()
             try:
-                self.slider = pyxas.plot3D(img_comb)
+                slider = pyxas.plot3D(img_comb)
+                self.slider.append[slider]
             except Exception as err:
                 print(err)
         except Exception as err:

@@ -24,23 +24,23 @@ def apply_ML_prj(img, n_iter=1, filt_sz=1, model_path='', device='cuda'):
 def apply_ML_tomo(img3D, model_path, device='cuda'):
     s = img3D.shape
     img3D[img3D<0] = 0
-    img3D = pyxas.otsu_mask_stack(img3D, 3, 2, 128)
-    tmp = img3D[img3D>0]
+    img3D_m = pyxas.otsu_mask_stack(img3D, 3, 2, 128)
+    tmp = img3D_m[img3D_m>0]
 
     scale = np.sort(tmp)[int(len(tmp)*0.95)]
     model = pyxas.RRDBNet(1, 1, 16, 4, 32)
     model.load_state_dict(torch.load(model_path, map_location=torch.device(device)))
     model = model.to(device)
-    img3D = img3D / scale
+    img3D_m = img3D_m / scale
 
     img_d = np.zeros_like(img3D)
     with (torch.no_grad()):
         for i in trange(s[0]):
-            img_torch = torch.from_numpy(img3D[i:i+1, np.newaxis]).float().to(device)
+            img_torch = torch.from_numpy(img3D_m[i:i+1, np.newaxis]).float().to(device)
             t = model(img_torch)
             img_d[i] = t.cpu().numpy().squeeze() * scale
 
-    img_comb = np.concatenate((img3D*scale, img_d), axis=2)
+    img_comb = np.concatenate((img3D, img_d), axis=2)
     return img_d, img_comb
 
 def masked_bkg_avg(img):
