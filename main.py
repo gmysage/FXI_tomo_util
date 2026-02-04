@@ -67,6 +67,11 @@ class App(QWidget):
         global torch_installed
         self.torch_installed = torch_installed
 
+    def closeEvent(self, *args, **kwargs):
+        super().closeEvent(*args, **kwargs)
+        print('close window')
+        plt.close('all')
+
     def initUI(self):
         self.setWindowTitle(self.title)
         self.setGeometry(self.left, self.top, self.width, self.height)
@@ -1002,8 +1007,15 @@ class App(QWidget):
 
 
     def layout_ml_recon(self):
-        lb_empty = QLabel()
+
+        lb_sep1 = QLabel()
+        lb_sep1.setFixedWidth(60)
+
+        lb_sep2 = QLabel()
+        lb_sep2.setFixedWidth(5)
+
         lb_empty1 = QLabel()
+        lb_empty2 = QLabel()
 
         lb_title = QLabel()
         lb_title.setText('ML denoise on recon3D')
@@ -1029,6 +1041,61 @@ class App(QWidget):
         self.pb_rec_ml_enoise.setFixedWidth(170)
         self.pb_rec_ml_enoise.setFont(self.font2)
         self.pb_rec_ml_enoise.clicked.connect(self.ml_3D_denosie_recon)
+
+        self.chkbox_ml_rm_bkg = QCheckBox(' Auto threshold Bkg.')
+        self.chkbox_ml_rm_bkg.setFont(self.font2)
+        self.chkbox_ml_rm_bkg.setFixedWidth(160)
+        self.chkbox_ml_rm_bkg.setChecked(False)
+        #self.chkbox_ml_rm_bkg.stateChanged.connect(self.ml_check_model)
+
+
+        ## OSTU auto_threshold
+        lb_ml_rm_bkg = QLabel()
+        lb_ml_rm_bkg.setFont(self.font2)
+        lb_ml_rm_bkg.setText('Auto threshold Bkg.')
+        lb_ml_rm_bkg.setAlignment(QtCore.Qt.AlignLeft | QtCore.Qt.AlignVCenter)
+        lb_ml_rm_bkg.setFixedWidth(140)
+
+        lb_ml_filt_sz = QLabel()
+        lb_ml_filt_sz.setFont(self.font2)
+        lb_ml_filt_sz.setText('Filt_sz:')
+        lb_ml_filt_sz.setAlignment(QtCore.Qt.AlignRight | QtCore.Qt.AlignVCenter)
+        lb_ml_filt_sz.setFixedWidth(50)
+
+        self.tx_ml_filt_sz = QLineEdit()
+        self.tx_ml_filt_sz.setFixedWidth(40)
+        self.tx_ml_filt_sz.setText('3')
+        self.tx_ml_filt_sz.setFont(self.font2)
+        self.tx_ml_filt_sz.setValidator(QIntValidator())
+
+        lb_ml_filt_iter = QLabel()
+        lb_ml_filt_iter.setFont(self.font2)
+        lb_ml_filt_iter.setText('Iter:')
+        lb_ml_filt_iter.setAlignment(QtCore.Qt.AlignRight | QtCore.Qt.AlignVCenter)
+        lb_ml_filt_iter.setFixedWidth(50)
+
+        self.tx_ml_filt_iter = QLineEdit()
+        self.tx_ml_filt_iter.setFixedWidth(40)
+        self.tx_ml_filt_iter.setText('2')
+        self.tx_ml_filt_iter.setFont(self.font2)
+        self.tx_ml_filt_iter.setValidator(QIntValidator())
+
+        lb_ml_filt_bins = QLabel()
+        lb_ml_filt_bins.setFont(self.font2)
+        lb_ml_filt_bins.setText('Bins:')
+        lb_ml_filt_bins.setAlignment(QtCore.Qt.AlignRight | QtCore.Qt.AlignVCenter)
+        lb_ml_filt_bins.setFixedWidth(50)
+
+        self.tx_ml_filt_bins = QLineEdit()
+        self.tx_ml_filt_bins.setFixedWidth(40)
+        self.tx_ml_filt_bins.setText('256')
+        self.tx_ml_filt_bins.setFont(self.font2)
+        self.tx_ml_filt_bins.setValidator(QIntValidator())
+
+        self.pb_ml_filt_test = QPushButton('Test')
+        self.pb_ml_filt_test.setFixedWidth(105)
+        self.pb_ml_filt_test.setFont(self.font2)
+        self.pb_ml_filt_test.clicked.connect(self.ml_auto_thresh_bkg)
 
         self.lb_ml_model_rec_msg = QLabel()
         #self.lb_ml_model_rec_msg.setFixedWidth(200)
@@ -1061,13 +1128,29 @@ class App(QWidget):
         hbox_ml.addWidget(self.pb_rec_ml_enoise)
         hbox_ml.addWidget(lb_ml_device_rec)
         hbox_ml.addWidget(self.cb_ml_device_rec)
+        hbox_ml.addWidget(lb_sep2)
+        hbox_ml.addWidget(self.chkbox_ml_rm_bkg)
         hbox_ml.addWidget(lb_empty1)
         hbox_ml.setAlignment(QtCore.Qt.AlignLeft | QtCore.Qt.AlignTop)
+
+        hbox_ml_rm_bkg = QHBoxLayout()
+        hbox_ml_rm_bkg.addWidget(lb_ml_rm_bkg)
+        hbox_ml_rm_bkg.addWidget(lb_ml_filt_sz)
+        hbox_ml_rm_bkg.addWidget(self.tx_ml_filt_sz)
+        hbox_ml_rm_bkg.addWidget(lb_ml_filt_iter)
+        hbox_ml_rm_bkg.addWidget(self.tx_ml_filt_iter)
+        hbox_ml_rm_bkg.addWidget(lb_ml_filt_bins)
+        hbox_ml_rm_bkg.addWidget(self.tx_ml_filt_bins)
+        hbox_ml_rm_bkg.addWidget(lb_sep1)
+        hbox_ml_rm_bkg.addWidget(self.pb_ml_filt_test )
+        hbox_ml_rm_bkg.setAlignment(QtCore.Qt.AlignLeft | QtCore.Qt.AlignTop)
 
         vbox = QVBoxLayout()
         vbox.addWidget(lb_title)
         #vbox.addWidget(self.chkbox_ml)
+        vbox.addLayout(hbox_ml_rm_bkg)
         vbox.addLayout(hbox)
+
         vbox.addLayout(hbox_ml)
         vbox.addWidget(self.lb_ml_model_rec_msg)
         vbox.addWidget(lb_empty1)
@@ -2302,6 +2385,53 @@ class App(QWidget):
             self.pb_rec_view_copy.setEnabled(True)
             QApplication.processEvents()
 
+
+    def ml_collect_auto_threshold_param(self):
+        filt_sz = int(self.tx_ml_filt_sz.text())
+        filt_iter = int(self.tx_ml_filt_iter.text())
+        filt_bins = int(self.tx_ml_filt_bins.text())
+        filt_param = {}
+        filt_param['sz'] = filt_sz
+        filt_param['iter'] = filt_iter
+        filt_param['bins'] = filt_bins
+        return filt_param
+
+    def ml_auto_thresh_bkg(self):
+        try:
+            self.lb_ml_model_rec_msg.setText('')
+            filt_param = self.ml_collect_auto_threshold_param()
+            filt_sz = filt_param['sz']
+            filt_iter = filt_param['iter']
+            filt_bins = filt_param['bins']
+            img3D, fn_short = self.get_tomo_image_from_file()
+            s = img3D.shape
+            sli = s[0] // 2
+            cur_img = img3D[sli]
+            img_d = ostu_mask_3D(cur_img, filt_sz, filt_iter, filt_bins).squeeze()
+            img_c = np.concatenate((cur_img, img_d), axis=1)
+            plt.figure(figsize=(12, 6))
+            plt.imshow(img_c)
+            plt.title(f'Bkg. removal\n{fn_short}')
+            plt.colorbar()
+            plt.show()
+        except Exception as err:
+            print(err)
+            self.lb_ml_model_rec_msg.setText(str(err))
+            QApplication.processEvents()
+
+    def get_tomo_image_from_file(self):
+        item = self.lst_prj_file.selectedItems()
+        fn_short = item[0].text()
+        fn_short = fn_short.split(':')[0]
+        fn_recon = self.fname_rc[fn_short]['full_path']
+        file_type = fn_recon.split('.')[-1]
+        if file_type == 'tiff' or file_type == 'tif':
+            img_rec_tomo = io.imread(fn_recon)
+        elif file_type == 'h5':
+            with h5py.File(fn_recon, 'r') as hf:
+                img_rec_tomo = np.array(hf['img'])
+        return img_rec_tomo, fn_short
+
     def ml_3D_denosie_recon(self):
         try:
             self.pb_rec_ml_enoise.setEnabled(False)
@@ -2312,18 +2442,15 @@ class App(QWidget):
             device = self.cb_ml_device_rec.currentText()
             model_path = self.tx_ml_model_rec.text()
 
-            item = self.lst_prj_file.selectedItems()
-            fn_short = item[0].text()
-            fn_short = fn_short.split(':')[0]
-            fn_recon = self.fname_rc[fn_short]['full_path']
-            file_type = fn_recon.split('.')[-1]
-            if file_type == 'tiff' or file_type == 'tif':
-                self.img_rec_tomo = io.imread(fn_recon)
-            elif file_type == 'h5':
-                with h5py.File(fn_recon, 'r') as hf:
-                    self.img_rec_tomo = np.array(hf['img'])
-            img3D = self.img_rec_tomo
-            img_d, img_comb = apply_ML_tomo(img3D, model_path, device)
+            img3D, fn_short = self.get_tomo_image_from_file()
+            self.img_rec_tomo = img3D
+
+            if self.chkbox_ml_rm_bkg.isChecked():
+                filt_param = self.ml_collect_auto_threshold_param()
+            else:
+                filt_param = {}
+
+            img_d, img_comb = apply_ML_tomo(img3D, model_path, filt_param, device)
             self.img_rec_tomo_denoise = img_d.copy()
             self.img_rec_tomo_denoise_compare = img_comb.copy()
             sup_title = fn_short

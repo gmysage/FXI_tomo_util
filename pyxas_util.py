@@ -2,6 +2,7 @@ import pyxas
 import torch
 import numpy as np
 from tqdm import trange
+from image_util import otsu_mask_stack,otsu_mask_stack_mpi
 
 def apply_ML_prj(img, n_iter=1, filt_sz=1, model_path='', device='cuda'):
     if model_path == '':
@@ -21,10 +22,28 @@ def apply_ML_prj(img, n_iter=1, filt_sz=1, model_path='', device='cuda'):
     img_output = img / img_bkg
     return img_output
 
-def apply_ML_tomo(img3D, model_path, device='cuda'):
+def ostu_mask_3D(img3D, filt_sz=3, iter=2, bins=128):
+    s = img3D.shape
+    if len(s) == 2:
+        img3D = img3D[np.newaxis]
+    #img_m = pyxas.otsu_mask_stack(img3D, filt_sz, iter, bins)
+    img_m = otsu_mask_stack_mpi(img3D, filt_sz, iter, bins)
+    return img_m
+
+
+def apply_ML_tomo(img3D, model_path, filt_param={}, device='cuda'):
     s = img3D.shape
     img3D[img3D<0] = 0
-    img3D_m = pyxas.otsu_mask_stack(img3D, 3, 2, 128)
+
+    if len(filt_param) == 3:
+        filt_sz = filt_param['sz']
+        filt_iter = filt_param['iter']
+        filt_bins = filt_param['bins']
+        #img3D_m = pyxas.otsu_mask_stack(img3D, filt_sz, filt_iter, filt_bins)
+        img3D_m = otsu_mask_stack_mpi(img3D, filt_sz, filt_iter, filt_bins)
+    else:
+        img3D_m = img3D
+
     tmp = img3D_m[img3D_m>0]
 
     scale = np.sort(tmp)[int(len(tmp)*0.95)]
