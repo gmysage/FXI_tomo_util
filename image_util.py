@@ -6,6 +6,7 @@ from scipy import ndimage
 import numpy as np
 from matplotlib.widgets import Slider
 import matplotlib.pyplot as plt
+from skimage.transform import resize
 
 def _otsu_worker(args):
     img_slice, kernal_size, iters, bins, erosion_iter = args
@@ -76,6 +77,15 @@ def img_smooth(img, kernal_size, axis=0):
         for i in range(img_stack.shape[2]):
             img_stack[:, :, i] = medfilt2d(img_stack[:,:, i], kernal_size)
     return img_stack
+
+def crop_scale_image(img_stack, output_size=(256, 256)):
+    img = img_stack.copy()
+    s = img.shape
+    if len(s) == 2:
+        img = np.expand_dims(img, axis=0)
+    s = img.shape
+    img_resize = resize(img, (s[0], output_size[0], output_size[1]))
+    return img_resize
 
 def plot3D(data, axis=0, index_init=None):
     fig, ax = plt.subplots()
