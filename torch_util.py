@@ -26,8 +26,7 @@ def ostu_mask_3D(img3D, filt_sz=3, iter=2, bins=128):
     if len(s) == 2:
         img3D = img3D[np.newaxis]
     img_m = otsu_mask_stack_mpi(img3D, filt_sz, iter, bins)
-    img_comb = np.concatenate((img3D, img_m), axis=2)
-    return img_m, img_comb
+    return img_m
 
 
 def apply_ML_tomo(img3D, model_name, model_path, device='cuda'):
@@ -58,12 +57,10 @@ def apply_ML_tomo(img3D, model_name, model_path, device='cuda'):
             img_torch = torch.from_numpy(img3D_m[i:i+1, np.newaxis]).float().to(device)
             t = model(img_torch)
             img_d[i] = t.cpu().numpy().squeeze() * scale
-    img_comb = np.concatenate((img3D, img_d), axis=2)
-    return img_d, img_comb
+    return img_d
 
 
 def medifilt_3D(img3D, filt_sz=3):
     img_d = img_smooth(img3D, filt_sz)
-    img_comb = np.concatenate((img3D, img_d), axis=2)
-    return img_d, img_comb
+    return img_d
 

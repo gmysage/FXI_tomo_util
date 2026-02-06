@@ -130,8 +130,8 @@ class App(QWidget):
         self.current_file_short = ''
         self.enable_multi_selection()
         self.slider = []
-        self.ml_model_path = f'{self.fpath}/pre_traind_model_xanes_denoise.pth'
-        self.ml_model_recon_path = f'{self.fpath}/model_tomo_best_psnr.pth'
+        self.ml_model_path = f'{self.fpath}/saved_model/transmission_bkg_removal/bkg_removal_RRDB4.pth.pth'
+        self.ml_model_recon_path = f'{self.fpath}/saved_model/tomo_denoise/tomo_denoise_RRDB4.pth'
         self.ml_model_path_default = self.ml_model_path
         self.ml_model_recon_path_default = self.ml_model_recon_path
 
@@ -152,7 +152,7 @@ class App(QWidget):
         self.tx_prj_path.setFont(self.font2)
         self.tx_prj_path.setStyleSheet('background: rgb(240, 240, 220);')
 
-        self.pb_open_prj = QPushButton('Open (.h5)')
+        self.pb_open_prj = QPushButton('Open')
         self.pb_open_prj.setFixedWidth(110)
         self.pb_open_prj.setFont(self.font2)
         self.pb_open_prj.clicked.connect(self.open_prj_file)
@@ -323,7 +323,8 @@ class App(QWidget):
         self.pb_del_list_item.clicked.connect(self.del_list_item)
 
         self.pb_rec_view_copy = QPushButton('View recon')
-        self.pb_rec_view_copy.setFont(self.font2)
+        self.pb_rec_view_copy.setFont(self.font1)
+        self.pb_rec_view_copy.setStyleSheet('color: rgb(50, 50, 250);')
         self.pb_rec_view_copy.clicked.connect(self.view_3D_recon)
         self.pb_rec_view_copy.setFixedWidth(112)
 
@@ -798,19 +799,23 @@ class App(QWidget):
 
         self.pb_rec_s = QPushButton('Recon single')
         self.pb_rec_s.setFixedWidth(170)
-        self.pb_rec_s.setFont(self.font2)
+        self.pb_rec_s.setFixedHeight(40)
+        self.pb_rec_s.setStyleSheet('color: rgb(50, 50, 250);')
+        self.pb_rec_s.setFont(self.font1)
         self.pb_rec_s.clicked.connect(lambda:self.recon_single_file(True))
 
         self.pb_rec_b = QPushButton('Recon batch')
         self.pb_rec_b.setFixedWidth(170)
-        self.pb_rec_b.setFont(self.font2)
+        self.pb_rec_b.setFixedHeight(40)
+        self.pb_rec_b.setStyleSheet('color: rgb(50, 50, 250);')
+        self.pb_rec_b.setFont(self.font1)
         self.pb_rec_b.clicked.connect(self.recon_batch_file)
-
+        """
         self.chkbox_napari = QCheckBox(' View in napari')
         self.chkbox_napari.setFont(self.font2)
         self.chkbox_napari.setFixedWidth(200)
         self.chkbox_napari.setChecked(False)
-
+        """
         self.terminal = QPlainTextEdit()
         self.terminal.setFixedWidth(600)
         self.terminal.setFixedHeight(200)
@@ -867,13 +872,13 @@ class App(QWidget):
         hbox_rec3 = QHBoxLayout()
         hbox_rec3.addWidget(self.pb_rec_s)
         hbox_rec3.addWidget(self.pb_rec_b)
-        hbox_rec3.addWidget(self.chkbox_napari)
+        #hbox_rec3.addWidget(self.chkbox_napari)
         hbox_rec3.addStretch()
         hbox_rec3.setAlignment(QtCore.Qt.AlignTop | QtCore.Qt.AlignLeft)
 
         vbox_rec_view = QVBoxLayout()
         vbox_rec_view.addLayout(hbox_rec3)
-        vbox_rec_view.addWidget(self.pb_rec_view)
+        #vbox_rec_view.addWidget(self.pb_rec_view)
         vbox_rec_view.addStretch()
         vbox_rec_view.setAlignment(QtCore.Qt.AlignTop | QtCore.Qt.AlignLeft)
 
@@ -895,7 +900,6 @@ class App(QWidget):
         vbox_rec.addStretch()
         vbox_rec.setAlignment(QtCore.Qt.AlignLeft | QtCore.Qt.AlignTop)
         return vbox_rec
-
 
 
     def layout_ml(self):
@@ -1140,7 +1144,7 @@ class App(QWidget):
 
         self.pb_ml_choice = QPushButton('Insert method')
         self.pb_ml_choice.setFixedWidth(120)
-        self.pb_ml_choice.setFont(self.font2)
+        self.pb_ml_choice.setFont(self.font1)
         self.pb_ml_choice.setStyleSheet('color: rgb(50, 50, 250);')
         self.pb_ml_choice.clicked.connect(self.ml_select_denoise_methode)
 
@@ -1154,9 +1158,10 @@ class App(QWidget):
         self.lst_ml_choice.setSelectionMode(QAbstractItemView.MultiSelection)
         self.lst_ml_choice.setFixedWidth(120)
         self.lst_ml_choice.setFixedHeight(90)
+        self.lst_ml_choice.addItem('ML denoise')
 
         # execusion 1
-        self.pb_rec_ml_enoise = QPushButton('ML denoise on recon')
+        self.pb_rec_ml_enoise = QPushButton('Apply to 3D stack')
         self.pb_rec_ml_enoise.setFixedWidth(170)
         self.pb_rec_ml_enoise.setFont(self.font2)
         self.pb_rec_ml_enoise.clicked.connect(self.ml_3D_denosie_recon)
@@ -1179,7 +1184,7 @@ class App(QWidget):
                 self.cb_ml_device_rec.addItem(f'cuda:{i:d}')
 
         # test slice
-        self.pb_rec_ml_test = QPushButton('Test slice')
+        self.pb_rec_ml_test = QPushButton('Test 1 slice')
         self.pb_rec_ml_test.setFixedWidth(170)
         self.pb_rec_ml_test.setFont(self.font2)
         self.pb_rec_ml_test.clicked.connect(self.ml_3D_denoise_slice) # need to modify
@@ -1197,7 +1202,8 @@ class App(QWidget):
 
         # msg box
         self.lb_ml_model_rec_msg = QLabel()
-        self.lb_ml_model_rec_msg.setStyleSheet('color: rgb(250, 50, 50);')
+        self.lb_ml_model_rec_msg.setFont(self.font1)
+        self.lb_ml_model_rec_msg.setStyleSheet('color: rgb(200, 50, 50);')
 
         hbox_ml_model_path = QHBoxLayout()
         hbox_ml_model_path.addWidget(lb_ml_model_path)
@@ -1418,9 +1424,9 @@ class App(QWidget):
             model_path = self.tx_ml_model.text()
 
             self.proj_ml = apply_ML_prj(proj_norm, n_iter, filt_sz, model_path, device)
-            if exist_napari and self.chkbox_napari.isChecked():
-                napari.view_image(proj_norm, title='Raw')
-                napari.view_image(self.proj_ml, title='ML')
+            #if exist_napari and self.chkbox_napari.isChecked():
+            #    napari.view_image(proj_norm, title='Raw')
+            #    napari.view_image(self.proj_ml, title='ML')
 
             sup_title = fn_short
             self.canvas1.sup_title = sup_title
@@ -1461,7 +1467,7 @@ class App(QWidget):
         file_dict = {}
         options = QFileDialog.Option()
         options |= QFileDialog.DontUseNativeDialog
-        file_type = 'h5 file (*.h5)'
+        file_type = 'h5 file (*.h5);; TIFF files (*.tiff *.tif)'
         fn, _ = QFileDialog.getOpenFileName(pytomo, "QFileDialog.getOpenFileName()", "", file_type, options=options)
         if fn:
             fn_tmp = fn.split('/')
@@ -1483,6 +1489,9 @@ class App(QWidget):
             self.fname_rc.update(file_dict)
             self.file_loaded.append(file_loaded)
             self.update_list()
+            if self.lst_prj_file.count() > 0:
+                item = self.lst_prj_file.item(0)
+                self.lst_prj_file.setCurrentItem(item)
             self.fn_rc_tmp = ''
 
     def refresh_file_folder(self):
@@ -2396,8 +2405,8 @@ class App(QWidget):
             self.update_list()
             QApplication.processEvents()
             if plot_flag:
-                if exist_napari and self.chkbox_napari.isChecked():
-                    napari.view_image(self.img_rec_tomo)
+                #if exist_napari and self.chkbox_napari.isChecked():
+                #    napari.view_image(self.img_rec_tomo)
                 fsave_short = fsave.split('/')[-1]
                 sup_title = fsave_short
                 self.canvas1.sup_title = sup_title
@@ -2482,14 +2491,14 @@ class App(QWidget):
                 self.msg = 'fail in loading image file'
                 self.update_msg()
                 return 0
-            if exist_napari and self.chkbox_napari.isChecked():
-                napari.view_image(self.img_rec_tomo)
+            #if exist_napari and self.chkbox_napari.isChecked():
+            #    napari.view_image(self.img_rec_tomo)
             fn_recon_short = fn_recon.split('/')[-1]
             sup_title = fn_recon_short
             self.canvas1.sup_title = sup_title
             if self.cb1.findText('3D tomo') < 0:
                 self.cb1.addItem('3D tomo')
-                self.cb1.setCurrentText('3D tomo')
+            self.cb1.setCurrentText('3D tomo')
             self.update_canvas_img()
             self.msg = f'view {fn_recon_short}'                     
 
@@ -2642,18 +2651,19 @@ class App(QWidget):
         img_comb = img_d.copy()
         n = len(ml_denoise_seq)
         for i, method in enumerate(ml_denoise_seq):
+            self.lb_ml_model_rec_msg.setText(f'Applying {method} ...')
+            QApplication.processEvents()
             if 'Median' in method:
                 print(f'\n{i + 1}/{n}: Apply median filter ...')
-                img_d, img_comb = medifilt_3D(img_d, medfilt_sz)
+                img_d = medifilt_3D(img_d, medfilt_sz)
             elif 'Bkg' in method:
                 print(f'\n{i + 1}/{n}: Apply Bkg. removal ...')
-                img_d, img_comb = ostu_mask_3D(img_d, filt_sz, filt_iter, filt_bins)
+                img_d = ostu_mask_3D(img_d, filt_sz, filt_iter, filt_bins)
             elif 'ML' in method:
                 print(f'\n{i + 1}/{n}: Apply ML denoising ...')
                 model_name, model_path, device = self.ml_select_3D_denosie_model()
-                img_d, img_comb = apply_ML_tomo(img3D, model_name, model_path, device=device)
-            self.lb_ml_model_rec_msg.setText(f'Applying {method} ...')
-            QApplication.processEvents()
+                img_d = apply_ML_tomo(img_d, model_name, model_path, device=device)
+        img_comb = np.concatenate((img3D, img_d), axis=2)
         return img_d, img_comb
 
 
@@ -2694,7 +2704,7 @@ class App(QWidget):
             print(err)
             self.lb_ml_model_rec_msg.setText(str(err))
         finally:
-            self.pb_rec_ml_enoise.setText('ML denoise on recon')
+            self.pb_rec_ml_enoise.setText('Apply to 3D stack')
             self.pb_rec_ml_enoise.setEnabled(True)
             QApplication.processEvents()
 
@@ -2731,7 +2741,7 @@ class App(QWidget):
         lb_empty = QLabel()
         lb_empty2 = QLabel()
         lb_empty2.setFixedWidth(10)
-        self.canvas1 = MyCanvas(obj=self)
+        self.canvas1 = MyCanvas(parent=self, obj=self)
         self.toolbar = NavigationToolbar(self.canvas1, self)
         self.sl1 = QScrollBar(QtCore.Qt.Horizontal)
         self.sl1.setMaximum(0)
@@ -2967,10 +2977,11 @@ class App(QWidget):
                 img = self.img_colormix
                 for i in range(img.shape[2]):
                     img[:, :, i] = img[:, :, i]
-                plt.figure()
+                #plt.figure()
+                fig, ax = plt.subplots(figsize=(10, 8))
                 img = (img - cmin) / (cmax - cmin)
-                plt.imshow(img, clim=[cmin, cmax])
-                plt.show()
+                ax.imshow(img, clim=[cmin, cmax])
+                fig.show()
             else:
                 img_stack = canvas.img_stack[canvas.current_img_index]
                 img_stack = np.array(img_stack, dtype = np.float32)
@@ -2984,10 +2995,12 @@ class App(QWidget):
                     io.imsave(fn, img_stack)
                     print(f'current image has been saved to file: {fn}')
                     self.msg = f'current image saved to: {fn}'
-                plt.figure()
-                plt.imshow(img_stack, clim=[cmin, cmax], cmap=canvas.colormap)
-                plt.axis('off')
-                plt.show()
+                #plt.figure()
+                fig, ax = plt.subplots(figsize=(10, 8))
+                im = ax.imshow(img_stack, clim=[cmin, cmax], cmap=canvas.colormap)
+                fig.colorbar(im, ax=ax)
+                ax.axis('off')
+                fig.show()
         except Exception as err:
             self.msg = f'file saving fails.  Error: {str(err)}'
         finally:
@@ -3177,6 +3190,7 @@ class App(QWidget):
                 self.auto_contrast(canvas)
                 try:
                     self.plot3D_slider = plot3D(self.img_rec_tomo_denoise_compare)
+                    self.slider.append(self.plot3D_slider)
                 except Exception as err:
                     print(err)
                     self.lb_msg.setText(str(err))
@@ -3214,9 +3228,11 @@ class App(QWidget):
             print(err)
 
 class MyCanvas(FigureCanvas):
-    def __init__(self, parent=None, width=5, height=5, dpi=110, obj=[]):
+    #def __init__(self, parent=None, width=5, height=5.5, dpi=110, obj=[]):
+    def __init__(self, parent=None, dpi=110, obj=[]):
         self.obj = obj
-        self.fig = Figure(figsize=(width, height), dpi=dpi)
+        #self.fig = Figure(figsize=(width, height), dpi=dpi)
+        self.fig = Figure(dpi=dpi)
         self.axes = self.fig.add_subplot(111)
         self.axes.axis('off')
         self.cmax = 1
@@ -3244,9 +3260,10 @@ class MyCanvas(FigureCanvas):
         self.color_list = ['red', 'green', 'blue', 'cyan', 'pink', 'yellow', 'orange', 'olive', 'purple', 'gray']
         self.current_color = 'red'
         self.special_info = None
-        FigureCanvas.__init__(self, self.fig)
+        super().__init__(self.fig)
         #FigureCanvas.setSizePolicy(self, QSizePolicy.Expanding, QSizePolicy.Expanding)
-        FigureCanvas.updateGeometry(self)
+        self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+        #FigureCanvas.updateGeometry(self)
         self.setParent(parent)
         self.mpl_connect('motion_notify_event', self.mouse_moved)
 

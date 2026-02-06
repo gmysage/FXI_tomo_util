@@ -4,7 +4,7 @@ from scipy.signal import medfilt2d
 from skimage.filters import threshold_otsu
 from scipy import ndimage
 import numpy as np
-from matplotlib.widgets import Slider
+from matplotlib.widgets import Slider as matplot_slider, Button
 import matplotlib.pyplot as plt
 from skimage.transform import resize
 
@@ -87,14 +87,21 @@ def crop_scale_image(img_stack, output_size=(256, 256)):
     img_resize = resize(img, (s[0], output_size[0], output_size[1]))
     return img_resize
 
-def plot3D(data, axis=0, index_init=None):
-    fig, ax = plt.subplots()
+def plot3D(data, axis=0, index_init=None, title="3D Slice Viewer"):
+    fig, ax = plt.subplots(figsize=(12, 6))
+
     if index_init is None:
         index_init = int(data.shape[axis] // 2)
+
     im = ax.imshow(data.take(index_init, axis=axis))
-    fig.subplots_adjust(bottom=0.15)
-    axslide = fig.add_axes([0.1, 0.03, 0.8, 0.03])
-    im_slider = Slider(
+
+    # Colorbar
+    fig.colorbar(im, ax=ax)
+    ax.set_title(f"{title} – index = {index_init}")
+    fig.subplots_adjust(bottom=0.20)
+    # ----- Slider -----
+    axslide = fig.add_axes([0.15, 0.05, 0.70, 0.03])
+    im_slider = matplot_slider(
         ax=axslide,
         label='index',
         valmin=0,
@@ -102,9 +109,13 @@ def plot3D(data, axis=0, index_init=None):
         valstep=1,
         valinit=index_init,
     )
+
     def update(val):
+        val = int(val)
         im.set_data(data.take(val, axis=axis))
+        ax.set_title(f"{title} – index = {val}")
         fig.canvas.draw_idle()
+
     im_slider.on_changed(update)
-    plt.show()
+    fig.show()
     return im_slider
